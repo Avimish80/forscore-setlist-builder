@@ -7,8 +7,7 @@ const NAV_ITEMS = [
   { href: '/library', label: 'Library' },
   { href: '/workbench', label: 'Workbench' },
   { href: '/aliases', label: 'Aliases' },
-  { href: '/setlist/new', label: 'New Setlist' },
-  { href: '/setlists', label: 'Saved Setlists' },
+  { href: '/setlists', label: 'Setlists' },
   { href: '/settings', label: 'Settings' },
 ];
 
@@ -20,7 +19,9 @@ export default function Sidebar() {
       <h1 className="text-lg font-bold mb-6 px-2">forScore Setlist Builder</h1>
       <nav className="flex flex-col gap-1">
         {NAV_ITEMS.map(item => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/');
+          const active = pathname === item.href
+            || pathname.startsWith(item.href + '/')
+            || (item.href === '/setlists' && pathname.startsWith('/setlist'));
           return (
             <Link
               key={item.href}

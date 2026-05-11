@@ -45,7 +45,9 @@ export default function SetlistReviewPage() {
   const [addResults, setAddResults] = useState<Score[]>([]);
   const addRef = useRef<HTMLInputElement>(null);
 
-  const dragItem = useRef<number | null>(null);
+  // Touch drag state
+  const touchDragIndex = useRef<number | null>(null);
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
   const load = useCallback(() => {
     const data = getSetlist(id) as SetlistData | null;
@@ -56,21 +58,53 @@ export default function SetlistReviewPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Drag & Drop ──
+  // ── Touch drag-and-drop (iPad) ──
+  function handleTouchStart(e: React.TouchEvent, index: number) {
+    touchDragIndex.current = index;
+    setDraggingIndex(index);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const row = el?.closest('[data-row-index]');
+    if (!row) return;
+    const targetIndex = parseInt(row.getAttribute('data-row-index') || '');
+    if (isNaN(targetIndex) || targetIndex === touchDragIndex.current) return;
+    const updated = [...items];
+    const dragged = updated.splice(touchDragIndex.current!, 1)[0];
+    updated.splice(targetIndex, 0, dragged);
+    touchDragIndex.current = targetIndex;
+    setDraggingIndex(targetIndex);
+    setItems(updated);
+  }
+
+  function handleTouchEnd() {
+    reorderSetlistItems(id, items.map(i => i.id));
+    touchDragIndex.current = null;
+    setDraggingIndex(null);
+    load();
+  }
+
+  // ── Mouse drag-and-drop (desktop) ──
+  const mouseDragIndex = useRef<number | null>(null);
+
   function handleDragStart(index: number) {
-    dragItem.current = index;
+    mouseDragIndex.current = index;
   }
 
   function handleDragEnter(index: number) {
+    if (mouseDragIndex.current === null || mouseDragIndex.current === index) return;
     const updated = [...items];
-    const dragged = updated.splice(dragItem.current!, 1)[0];
+    const dragged = updated.splice(mouseDragIndex.current, 1)[0];
     updated.splice(index, 0, dragged);
-    dragItem.current = index;
+    mouseDragIndex.current = index;
     setItems(updated);
   }
 
   function handleDrop() {
-    dragItem.current = null;
+    mouseDragIndex.current = null;
     reorderSetlistItems(id, items.map(i => i.id));
     load();
   }
@@ -110,6 +144,15 @@ export default function SetlistReviewPage() {
 
   function handleAddScore(score: Score) {
     addSetlistItem(id, { score_id: score.id });
+    setAddQuery('');
+    setAddResults([]);
+    load();
+    addRef.current?.focus();
+  }
+
+  function handleAddByName() {
+    if (!addQuery.trim()) return;
+    addSetlistItem(id, { requested_title: addQuery.trim() });
     setAddQuery('');
     setAddResults([]);
     load();
@@ -178,14 +221,20 @@ export default function SetlistReviewPage() {
             {items.map((item, index) => (
               <tr
                 key={item.id}
+                data-row-index={index}
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragEnter={() => handleDragEnter(index)}
                 onDragEnd={handleDrop}
                 onDragOver={e => e.preventDefault()}
-                className="hover:bg-gray-50 cursor-grab active:cursor-grabbing"
+                onTouchStart={e => handleTouchStart(e, index)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none transition-opacity ${
+                  draggingIndex === index ? 'opacity-50 bg-blue-50' : ''
+                }`}
               >
-                <td className="text-gray-300 text-center select-none px-1">⠿</td>
+                <td className="text-gray-300 text-center px-1 text-lg">⠿</td>
                 <td className="text-gray-500 text-sm">{index + 1}</td>
                 <td className="font-medium">{item.requested_title}</td>
 
@@ -270,8 +319,9 @@ export default function SetlistReviewPage() {
         <div className="relative">
           <input
             ref={addRef} type="text"
-            placeholder="Search your library to add a song..."
+            placeholder="Search library or type a song name…"
             value={addQuery} onChange={e => setAddQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && addResults.length === 0 && addQuery.trim()) handleAddByName(); }}
             className="w-full"
           />
           {addResults.length > 0 && (
@@ -291,7 +341,19 @@ export default function SetlistReviewPage() {
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-400 mt-1">Click a result to add it to the setlist.</p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-400">
+            {addResults.length > 0 ? 'Click a result to add it.' : addQuery.length >= 2 ? 'No library match — add by name?' : 'Search your library or type any name to add.'}
+          </p>
+          {addQuery.trim() && addResults.length === 0 && (
+            <button
+              onClick={handleAddByName}
+              className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded"
+            >
+              Add "{addQuery.trim()}" as unmatched
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
