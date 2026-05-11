@@ -1,0 +1,11 @@
+node_modules/
+.next/
+data/*.db
+data/*.db-journal
+data/*.db-shm
+data/*.db-wal
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+*.4sb
+*.4ss
