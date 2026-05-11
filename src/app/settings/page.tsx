@@ -2,14 +2,21 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { importDatabaseFile, exportDatabaseFile, getDbStats, clearDatabase } from '@/lib/client-db';
+import { import4sb, ImportProgress } from '@/lib/parse-4sb';
+import { getPdfCount, clearPdfs } from '@/lib/pdf-store';
 
 export default function SettingsPage() {
   const [stats, setStats] = useState({ scores: 0, setlists: 0, aliases: 0 });
+  const [pdfCount, setPdfCount] = useState(0);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [backupProgress, setBackupProgress] = useState<ImportProgress | null>(null);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const backupRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setStats(getDbStats());
+    getPdfCount().then(setPdfCount);
   }, []);
 
   async function handleImportDb(e: React.ChangeEvent<HTMLInputElement>) {
@@ -39,10 +46,33 @@ export default function SettingsPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function handleImportBackup(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBackupMsg(`Reading ${(file.size / 1024 / 1024).toFixed(0)} MB…`);
+    setBackupProgress({ total: 0, done: 0, currentFile: 'Loading file…' });
+    try {
+      const buffer = await file.arrayBuffer();
+      setBackupProgress({ total: 0, done: 0, currentFile: 'Extracting PDFs…' });
+      const count = await import4sb(buffer, (p) => {
+        setBackupProgress(p);
+        setBackupMsg(`Extracting PDFs: ${p.done} / ${p.total}`);
+      });
+      setBackupMsg(`Done! Imported ${count} PDFs.`);
+      setBackupProgress(null);
+      setPdfCount(count);
+    } catch (err: any) {
+      setBackupMsg(`Import failed: ${err.message}`);
+      setBackupProgress(null);
+    }
+    if (backupRef.current) backupRef.current.value = '';
+  }
+
   async function handleClearDb() {
     if (!confirm('This will delete ALL data (scores, setlists, aliases). Are you sure?')) return;
     if (!confirm('Really? This cannot be undone.')) return;
     await clearDatabase();
+    await clearPdfs();
     window.location.reload();
   }
 
@@ -66,7 +96,10 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-500">Aliases</p>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-3">Data is stored locally on this device.</p>
+        {pdfCount > 0 && (
+          <p className="text-xs text-green-600 mt-3">📄 {pdfCount} PDFs stored locally</p>
+        )}
+        <p className="text-xs text-gray-400 mt-1">Data is stored locally on this device.</p>
       </div>
 
       <div className="space-y-4 mb-6">
@@ -85,6 +118,31 @@ export default function SettingsPage() {
         </p>
         {importMsg && (
           <p className={`text-sm ${importMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}>{importMsg}</p>
+        )}
+      </div>
+
+      <div className="space-y-4 mb-6">
+        <h2 className="text-sm font-semibold text-gray-700">forScore Backup</h2>
+        <button onClick={() => backupRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
+          Import forScore Backup (.4sb)
+        </button>
+        <input ref={backupRef} type="file" accept=".4sb" className="hidden" onChange={handleImportBackup} />
+        <p className="text-xs text-gray-500">
+          Import a forScore backup archive to load all your PDF charts. Creates → forScore → Backups on your iPad.
+        </p>
+        {backupProgress && (
+          <div>
+            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+              <div
+                className="bg-indigo-600 h-3 rounded-full transition-all"
+                style={{ width: `${backupProgress.total ? (backupProgress.done / backupProgress.total) * 100 : 0}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">{backupProgress.done} / {backupProgress.total}</p>
+          </div>
+        )}
+        {backupMsg && !backupProgress && (
+          <p className={`text-sm ${backupMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}>{backupMsg}</p>
         )}
       </div>
 

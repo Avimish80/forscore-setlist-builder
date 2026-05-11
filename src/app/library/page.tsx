@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import ScoreTable from '@/components/ScoreTable';
 import { Score } from '@/lib/types';
 import { queryScores, updateScore, importScoresFromFiles, createAlias } from '@/lib/data';
+import PdfViewer from '@/components/PdfViewer';
 
 const LETTERS = ['#', ...Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'עב'];
 
@@ -241,8 +242,8 @@ export default function LibraryPage() {
             </button>
           </div>
 
-          {/* Score info card (replaces PDF iframe for iPad compatibility) */}
-          <div className="flex-1 overflow-hidden flex items-center justify-center bg-gray-100">
+          {/* PDF viewer or info card */}
+          <PdfViewer filename={viewing.forscore_path} fallback={
             <div className="text-center p-8">
               <div className="text-6xl mb-4">🎵</div>
               <p className="font-medium text-lg mb-1">{viewing.display_title}</p>
@@ -253,9 +254,9 @@ export default function LibraryPage() {
               {viewing.version_label && (
                 <span className="inline-block bg-blue-100 text-blue-700 text-sm px-2 py-1 rounded">Instrument: {viewing.version_label}</span>
               )}
-              <div className="mt-6"></div>
+              <p className="text-sm text-gray-400 mt-6">Import a forScore backup (.4sb) in Settings to view PDFs here.</p>
             </div>
-          </div>
+          } />
 
           {/* Metadata editor */}
           <div className="shrink-0 border-t bg-gray-50 p-4">
