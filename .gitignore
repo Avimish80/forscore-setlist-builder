@@ -9,3 +9,4 @@ data/*.db-wal
 next-env.d.ts
 *.4sb
 *.4ss
+.vercel
