@@ -253,14 +253,7 @@ export default function LibraryPage() {
               {viewing.version_label && (
                 <span className="inline-block bg-blue-100 text-blue-700 text-sm px-2 py-1 rounded">Instrument: {viewing.version_label}</span>
               )}
-              <div className="mt-6">
-                <a
-                  href={`forscore://score?title=${encodeURIComponent(viewing.display_title)}`}
-                  className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
-                >
-                  Open in forScore
-                </a>
-              </div>
+              <div className="mt-6"></div>
             </div>
           </div>
 

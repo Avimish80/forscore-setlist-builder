@@ -231,15 +231,18 @@ export default function SetlistReviewPage() {
     setTimeout(() => w.print(), 400);
   }
 
-  function handleExport() {
+  async function handleSendToForScore() {
     const result = exportSetlistXml(id);
     if (!result) return;
-    const blob = new Blob([result.xml], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
+    const filename = `${result.name.replace(/[^a-zA-Z0-9\s-]/g, '')}.4ss`;
+    const file = new File([result.xml], filename, { type: 'application/xml' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: result.name }); return; } catch (_) {}
+    }
+    // Fallback: trigger download
+    const url = URL.createObjectURL(new Blob([result.xml], { type: 'application/xml' }));
     const a = document.createElement('a');
-    a.href = url;
-    a.download = `${result.name.replace(/[^a-zA-Z0-9\s-]/g, '')}.4ss`;
-    a.click();
+    a.href = url; a.download = filename; a.click();
     URL.revokeObjectURL(url);
   }
 
@@ -344,7 +347,7 @@ export default function SetlistReviewPage() {
           <button onClick={() => { rematchSetlist(id); load(); }} className="bg-gray-100 hover:bg-gray-200 text-gray-700">Re-match All</button>
           <button onClick={enterEditMode} className="bg-orange-500 hover:bg-orange-600 text-white">Edit Order</button>
           <button onClick={handlePrint} className="bg-purple-600 hover:bg-purple-700 text-white">Print Setlist</button>
-          <button onClick={handleExport} className="bg-green-600 hover:bg-green-700 text-white">Export .4ss</button>
+          <button onClick={handleSendToForScore} className="bg-green-600 hover:bg-green-700 text-white">Send to forScore</button>
         </div>
       </div>
 
@@ -398,10 +401,6 @@ export default function SetlistReviewPage() {
                 <td><StatusBadge status={item.match_status} /></td>
                 <td>
                   <div className="flex gap-1 flex-wrap items-center">
-                    {item.matched_score_id && (
-                      <a href={`forscore://score?title=${encodeURIComponent(item.matched_display_title || '')}`}
-                        className="text-indigo-500 hover:text-indigo-700 bg-transparent px-2 py-1 text-xs">forScore</a>
-                    )}
                     <button onClick={() => openSearch(item.id)} className="text-blue-600 hover:text-blue-800 bg-transparent px-2 py-1 text-xs">Search</button>
                     <button onClick={() => handleUpdateItem(item.id, null, 'placeholder')} className="text-purple-600 hover:text-purple-800 bg-transparent px-2 py-1 text-xs">Placeholder</button>
                     {item.matched_score_id && (
