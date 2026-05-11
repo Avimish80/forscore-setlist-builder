@@ -188,6 +188,49 @@ export default function SetlistReviewPage() {
     load(); addRef.current?.focus();
   }
 
+  function handlePrint() {
+    if (!setlist) return;
+    let songNumber = 0;
+    const rows = items.map(item => {
+      const isSeparator = item.match_status === 'placeholder' || !item.matched_score_id;
+      if (!isSeparator) songNumber++;
+      if (isSeparator) {
+        return `<tr class="separator"><td colspan="2">${item.requested_title}</td></tr>`;
+      }
+      return `<tr><td class="num">${songNumber}</td><td>${item.requested_title}</td></tr>`;
+    }).join('\n');
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>${setlist.name}</title>
+<style>
+  body { font-family: -apple-system, Arial, sans-serif; max-width: 700px; margin: 40px auto; color: #111; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  p.sub { color: #666; font-size: 14px; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #eee; }
+  td.num { width: 36px; color: #999; text-align: right; padding-right: 16px; font-size: 13px; }
+  tr.separator td { background: #f3f4f6; font-weight: 600; color: #374151; padding: 6px 10px; border-bottom: 2px solid #d1d5db; letter-spacing: 0.03em; font-size: 13px; text-transform: uppercase; }
+  @media print { body { margin: 20px; } }
+</style>
+</head>
+<body>
+<h1>${setlist.name}</h1>
+<p class="sub">${items.filter(i => i.match_status !== 'placeholder' && i.matched_score_id).length} songs</p>
+<table>${rows}</table>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 400);
+  }
+
   function handleExport() {
     const result = exportSetlistXml(id);
     if (!result) return;
@@ -300,6 +343,7 @@ export default function SetlistReviewPage() {
         <div className="flex gap-2">
           <button onClick={() => { rematchSetlist(id); load(); }} className="bg-gray-100 hover:bg-gray-200 text-gray-700">Re-match All</button>
           <button onClick={enterEditMode} className="bg-orange-500 hover:bg-orange-600 text-white">Edit Order</button>
+          <button onClick={handlePrint} className="bg-purple-600 hover:bg-purple-700 text-white">Print Setlist</button>
           <button onClick={handleExport} className="bg-green-600 hover:bg-green-700 text-white">Export .4ss</button>
         </div>
       </div>
