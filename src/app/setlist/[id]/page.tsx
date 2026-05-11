@@ -7,7 +7,7 @@ import { Score } from '@/lib/types';
 import {
   getSetlist, updateSetlistItem, deleteSetlistItem,
   reorderSetlistItems, addSetlistItem, rematchSetlist,
-  exportSetlistXml, searchScores, createAlias,
+  exportSetlistXml, searchScores, createAlias, renameSetlist,
 } from '@/lib/data';
 
 interface ItemRow {
@@ -46,6 +46,10 @@ export default function SetlistReviewPage() {
   const [addQuery, setAddQuery] = useState('');
   const [addResults, setAddResults] = useState<Score[]>([]);
   const addRef = useRef<HTMLInputElement>(null);
+
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const touchDragIndex = useRef<number | null>(null);
   const isDragging = useRef(false);
@@ -196,6 +200,15 @@ export default function SetlistReviewPage() {
     URL.revokeObjectURL(url);
   }
 
+  function handleSaveName() {
+    const trimmed = nameValue.trim();
+    if (trimmed && trimmed !== setlist?.name) {
+      renameSetlist(id, trimmed);
+      load();
+    }
+    setEditingName(false);
+  }
+
   if (loading) return <p className="text-gray-500 p-6">Loading...</p>;
   if (!setlist) return <p className="text-red-600 p-6">Setlist not found.</p>;
 
@@ -263,7 +276,25 @@ export default function SetlistReviewPage() {
     <div className="p-4 overflow-y-auto h-screen">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold">{setlist.name}</h1>
+          {editingName ? (
+            <input
+              ref={nameInputRef}
+              value={nameValue}
+              onChange={e => setNameValue(e.target.value)}
+              onBlur={handleSaveName}
+              onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+              className="text-2xl font-bold border-b-2 border-blue-500 outline-none bg-transparent w-full"
+              autoFocus
+            />
+          ) : (
+            <button
+              onClick={() => { setNameValue(setlist.name); setEditingName(true); }}
+              className="flex items-center gap-2 group bg-transparent border-0 p-0 text-left"
+            >
+              <h1 className="text-2xl font-bold">{setlist.name}</h1>
+              <span className="text-gray-400 opacity-0 group-hover:opacity-100 text-base">✎</span>
+            </button>
+          )}
           <p className="text-sm text-gray-500">{matched}/{items.length} matched</p>
         </div>
         <div className="flex gap-2">

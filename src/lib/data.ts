@@ -367,6 +367,13 @@ export function exportSetlistXml(setlistId: number): { xml: string; name: string
   return { xml: generateSetlistXml(setlist.name, exportItems), name: setlist.name };
 }
 
+// ── Setlist updates ──
+
+export function renameSetlist(setlistId: number, name: string) {
+  const db = getClientDb();
+  db.prepare("UPDATE setlists SET name = ?, updated_at = datetime('now') WHERE id = ?").run(name.trim(), setlistId);
+}
+
 // ── Setlist item updates ──
 
 export function updateSetlistItem(itemId: number, fields: { matched_score_id?: number | null; match_status?: string }) {
