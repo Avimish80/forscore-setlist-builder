@@ -47,41 +47,73 @@ export default function SetlistReviewPage() {
 
   // Touch drag state
   const touchDragIndex = useRef<number | null>(null);
+  const isDragging = useRef(false);
+  const itemsRef = useRef<ItemRow[]>([]);
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
 
   const load = useCallback(() => {
     const data = getSetlist(id) as SetlistData | null;
     setSetlist(data);
-    setItems(data?.items || []);
+    const newItems = data?.items || [];
+    setItems(newItems);
+    itemsRef.current = newItems;
     setLoading(false);
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
 
+  // Attach non-passive touchmove to tbody so preventDefault() actually works
+  useEffect(() => {
+    const el = tbodyRef.current;
+    if (!el) return;
+    const onMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+
+      // Auto-scroll when near edges of scroll container
+      const container = scrollContainerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        const edgeSize = 80;
+        if (touch.clientY < rect.top + edgeSize) {
+          container.scrollTop -= 8;
+        } else if (touch.clientY > rect.bottom - edgeSize) {
+          container.scrollTop += 8;
+        }
+      }
+
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      const row = target?.closest('[data-row-index]');
+      if (!row) return;
+      const targetIndex = parseInt(row.getAttribute('data-row-index') || '');
+      if (isNaN(targetIndex) || targetIndex === touchDragIndex.current) return;
+
+      const updated = [...itemsRef.current];
+      const dragged = updated.splice(touchDragIndex.current!, 1)[0];
+      updated.splice(targetIndex, 0, dragged);
+      touchDragIndex.current = targetIndex;
+      itemsRef.current = updated;
+      setDraggingIndex(targetIndex);
+      setItems(updated);
+    };
+    el.addEventListener('touchmove', onMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onMove);
+  }, []);
+
   // ── Touch drag-and-drop (iPad) ──
-  function handleTouchStart(e: React.TouchEvent, index: number) {
+  function handleTouchStart(_e: React.TouchEvent, index: number) {
     touchDragIndex.current = index;
+    isDragging.current = true;
     setDraggingIndex(index);
   }
 
-  function handleTouchMove(e: React.TouchEvent) {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    const row = el?.closest('[data-row-index]');
-    if (!row) return;
-    const targetIndex = parseInt(row.getAttribute('data-row-index') || '');
-    if (isNaN(targetIndex) || targetIndex === touchDragIndex.current) return;
-    const updated = [...items];
-    const dragged = updated.splice(touchDragIndex.current!, 1)[0];
-    updated.splice(targetIndex, 0, dragged);
-    touchDragIndex.current = targetIndex;
-    setDraggingIndex(targetIndex);
-    setItems(updated);
-  }
-
   function handleTouchEnd() {
-    reorderSetlistItems(id, items.map(i => i.id));
+    isDragging.current = false;
+    reorderSetlistItems(id, itemsRef.current.map(i => i.id));
     touchDragIndex.current = null;
     setDraggingIndex(null);
     load();
@@ -188,7 +220,7 @@ export default function SetlistReviewPage() {
   const matched = items.filter(i => i.match_status === 'matched').length;
 
   return (
-    <div className="p-4 overflow-y-auto h-[calc(100vh-48px)]">
+    <div ref={scrollContainerRef} className="p-4 overflow-y-auto h-screen">
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -217,7 +249,7 @@ export default function SetlistReviewPage() {
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody ref={tbodyRef}>
             {items.map((item, index) => (
               <tr
                 key={item.id}
@@ -228,7 +260,6 @@ export default function SetlistReviewPage() {
                 onDragEnd={handleDrop}
                 onDragOver={e => e.preventDefault()}
                 onTouchStart={e => handleTouchStart(e, index)}
-                onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing select-none transition-opacity ${
                   draggingIndex === index ? 'opacity-50 bg-blue-50' : ''

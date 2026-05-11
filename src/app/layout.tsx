@@ -27,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="flex min-h-screen bg-white">
+      <body className="flex h-screen overflow-hidden bg-white">
         <DbProvider>
           <Sidebar />
           <main className="flex-1 overflow-auto">
