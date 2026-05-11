@@ -23,7 +23,7 @@ export function generateSetlistXml(name: string, items: ExportItem[]): string {
     if (item.match_status === 'placeholder' || !item.matched_score) {
       return `  <placeholder title="${escapeXml(item.requested_title)}" />`;
     }
-    return `  <score title="${escapeXml(item.matched_score.display_title)}" path="${escapeXml(item.matched_score.forscore_path)}" />`;
+    return `  <score title="${escapeXml(item.requested_title)}" path="${escapeXml(item.matched_score.forscore_path)}" />`;
   });
 
   return [
