@@ -225,9 +225,20 @@ export async function initClientDb(): Promise<void> {
   if (saved) {
     sqlJsDb = new SQL.Database(saved);
   } else {
-    sqlJsDb = new SQL.Database();
-    sqlJsDb.run(SCHEMA);
-    scheduleSave();
+    // Try to load the bundled library on first install
+    try {
+      const res = await fetch('/library.db');
+      if (res.ok) {
+        const buf = await res.arrayBuffer();
+        sqlJsDb = new SQL.Database(new Uint8Array(buf));
+        await saveToIDB(new Uint8Array(sqlJsDb.export()));
+      }
+    } catch (_) {}
+    if (!sqlJsDb) {
+      sqlJsDb = new SQL.Database();
+      sqlJsDb.run(SCHEMA);
+      scheduleSave();
+    }
   }
 
   clientDb = new ClientDb(sqlJsDb);
