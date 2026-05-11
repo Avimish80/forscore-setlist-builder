@@ -1,17 +1,23 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
-  const router = useRouter();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    document.cookie = `auth=${encodeURIComponent(password)}; path=/; max-age=2592000`;
-    router.push('/library');
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (res.ok) {
+      window.location.href = '/library';
+    } else {
+      setError(true);
+    }
   }
 
   return (
