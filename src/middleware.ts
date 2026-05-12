@@ -18,5 +18,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|sql-wasm.wasm|sql-wasm.js|library.db|api/auth).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|sql-wasm.wasm|sql-wasm.js|library.db|pdf.worker.min.mjs|api/auth).*)'],
 };
