@@ -54,13 +54,18 @@ export default function SettingsPage() {
     try {
       const buffer = await file.arrayBuffer();
       setBackupProgress({ total: 0, done: 0, currentFile: 'Extracting PDFs…' });
-      const count = await import4sb(buffer, (p) => {
+      const result = await import4sb(buffer, (p) => {
         setBackupProgress(p);
-        setBackupMsg(`Extracting PDFs: ${p.done} / ${p.total}`);
+        setBackupMsg(`Extracting: ${p.done} / ${p.total}`);
       });
-      setBackupMsg(`Done! Imported ${count} PDFs.`);
+      setBackupMsg(
+        `Done! ${result.pdfs} PDFs imported, ${result.scoresAdded} new scores added` +
+        (result.scoresSkipped > 0 ? `, ${result.scoresSkipped} already in library.` : '.')
+      );
       setBackupProgress(null);
-      setPdfCount(count);
+      setStats(getDbStats());
+      const newPdfCount = await getPdfCount();
+      setPdfCount(newPdfCount);
     } catch (err: any) {
       setBackupMsg(`Import failed: ${err.message}`);
       setBackupProgress(null);
