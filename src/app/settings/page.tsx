@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { importDatabaseFile, exportDatabaseFile, getDbStats, clearDatabase } from '@/lib/client-db';
 import { import4sb, ImportProgress } from '@/lib/parse-4sb';
-import { getPdfCount, clearPdfs } from '@/lib/pdf-store';
+import { getPdfCount, clearPdfs, listPdfFilenames } from '@/lib/pdf-store';
+import { rebuildLibraryFromFilenames } from '@/lib/data';
 
 export default function SettingsPage() {
   const [stats, setStats] = useState({ scores: 0, setlists: 0, aliases: 0 });
@@ -73,6 +74,18 @@ export default function SettingsPage() {
     if (backupRef.current) backupRef.current.value = '';
   }
 
+  async function handleRebuildLibrary() {
+    setBackupMsg('Rebuilding library from stored PDFs…');
+    try {
+      const filenames = await listPdfFilenames();
+      const { added, skipped } = rebuildLibraryFromFilenames(filenames);
+      setStats(getDbStats());
+      setBackupMsg(`Library rebuilt: ${added} scores added, ${skipped} already present.`);
+    } catch (err: any) {
+      setBackupMsg(`Rebuild failed: ${err.message}`);
+    }
+  }
+
   async function handleClearDb() {
     if (!confirm('This will delete ALL data (scores, setlists, aliases). Are you sure?')) return;
     if (!confirm('Really? This cannot be undone.')) return;
@@ -132,6 +145,11 @@ export default function SettingsPage() {
           <button onClick={() => backupRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
             Import forScore Backup (.4sb)
           </button>
+          {pdfCount > 0 && stats.scores < pdfCount && (
+            <button onClick={handleRebuildLibrary} className="bg-amber-500 hover:bg-amber-600 text-white text-sm">
+              Rebuild Library from Stored PDFs
+            </button>
+          )}
           {pdfCount > 0 && (
             <button
               onClick={async () => {

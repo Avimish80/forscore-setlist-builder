@@ -53,6 +53,16 @@ export async function getPdfCount(): Promise<number> {
   });
 }
 
+export async function listPdfFilenames(): Promise<string[]> {
+  const db = await openPdfDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PDF_STORE, 'readonly');
+    const req = tx.objectStore(PDF_STORE).getAllKeys();
+    req.onsuccess = () => { db.close(); resolve(req.result as string[]); };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+}
+
 export async function clearPdfs(): Promise<void> {
   const db = await openPdfDb();
   return new Promise((resolve, reject) => {

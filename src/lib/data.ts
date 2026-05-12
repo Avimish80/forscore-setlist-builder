@@ -367,6 +367,32 @@ export function exportSetlistXml(setlistId: number): { xml: string; name: string
   return { xml: generateSetlistXml(setlist.name, exportItems), name: setlist.name };
 }
 
+export function rebuildLibraryFromFilenames(filenames: string[]): { added: number; skipped: number } {
+  const db = getClientDb();
+  const existing = db.prepare('SELECT forscore_path FROM scores').all() as { forscore_path: string }[];
+  const existingPaths = new Set(existing.map(r => r.forscore_path));
+
+  const insertStmt = db.prepare(`
+    INSERT INTO scores (original_filename, original_relative_path, original_absolute_path,
+      forscore_path, display_title, normalized_title, detected_key, version_label, file_size, status)
+    VALUES (?, '', '', ?, ?, ?, ?, ?, ?, 'new')
+  `);
+
+  let added = 0, skipped = 0;
+  for (const filename of filenames) {
+    if (!filename.toLowerCase().endsWith('.pdf')) continue;
+    if (existingPaths.has(filename)) { skipped++; continue; }
+    const cleanTitle = guessCleanTitle(filename);
+    const normalizedTitle = normalize(filename);
+    const key = detectKey(filename);
+    const version = detectVersionLabel(filename);
+    insertStmt.run(filename, filename, cleanTitle, normalizedTitle, key, version, 0);
+    existingPaths.add(filename);
+    added++;
+  }
+  return { added, skipped };
+}
+
 // ── Setlist updates ──
 
 export function renameSetlist(setlistId: number, name: string) {
