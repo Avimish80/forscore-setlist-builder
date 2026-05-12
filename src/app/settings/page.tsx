@@ -122,13 +122,27 @@ export default function SettingsPage() {
       </div>
 
       <div className="space-y-4 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700">forScore Backup</h2>
-        <button onClick={() => backupRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
-          Import forScore Backup (.4sb)
-        </button>
+        <h2 className="text-sm font-semibold text-gray-700">forScore Backup (PDFs)</h2>
+        <div className="flex gap-3 flex-wrap">
+          <button onClick={() => backupRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
+            Import forScore Backup (.4sb)
+          </button>
+          {pdfCount > 0 && (
+            <button
+              onClick={async () => {
+                if (!confirm(`Delete all ${pdfCount} stored PDFs? Setlists and aliases will be kept.`)) return;
+                await clearPdfs();
+                setPdfCount(0);
+              }}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+            >
+              Clear PDFs
+            </button>
+          )}
+        </div>
         <input ref={backupRef} type="file" accept=".4sb" className="hidden" onChange={handleImportBackup} />
         <p className="text-xs text-gray-500">
-          Import a forScore backup archive to load all your PDF charts. Creates → forScore → Backups on your iPad.
+          Imports all charts from a forScore backup. In forScore, tap Tools → Backup → Save, then transfer the .4sb file to your iPad and import here.
         </p>
         {backupProgress && (
           <div>
@@ -138,7 +152,9 @@ export default function SettingsPage() {
                 style={{ width: `${backupProgress.total ? (backupProgress.done / backupProgress.total) * 100 : 0}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">{backupProgress.done} / {backupProgress.total}</p>
+            <p className="text-xs text-gray-500 mt-1 truncate">
+              {backupProgress.done} / {backupProgress.total} — {backupProgress.currentFile}
+            </p>
           </div>
         )}
         {backupMsg && !backupProgress && (
