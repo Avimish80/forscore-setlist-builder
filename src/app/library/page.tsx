@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import ScoreTable from '@/components/ScoreTable';
 import { Score } from '@/lib/types';
 import { queryScores, updateScore, importScoresFromFiles, createAlias } from '@/lib/data';
-import PdfViewer from '@/components/PdfViewer';
+import PdfModal from '@/components/PdfModal';
 
 const LETTERS = ['#', ...Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'עב'];
 
@@ -36,6 +36,7 @@ export default function LibraryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [viewing, setViewing] = useState<Score | null>(null);
+  const [pdfModal, setPdfModal] = useState<Score | null>(null);
   const [editFields, setEditFields] = useState<Partial<Score>>({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
@@ -242,8 +243,8 @@ export default function LibraryPage() {
             </button>
           </div>
 
-          {/* PDF viewer or info card */}
-          <PdfViewer filename={viewing.forscore_path} fallback={
+          {/* Score info + View button */}
+          <div className="flex-1 overflow-hidden flex items-center justify-center bg-gray-100">
             <div className="text-center p-8">
               <div className="text-6xl mb-4">🎵</div>
               <p className="font-medium text-lg mb-1">{viewing.display_title}</p>
@@ -254,9 +255,16 @@ export default function LibraryPage() {
               {viewing.version_label && (
                 <span className="inline-block bg-blue-100 text-blue-700 text-sm px-2 py-1 rounded">Instrument: {viewing.version_label}</span>
               )}
-              <p className="text-sm text-gray-400 mt-6">Import a forScore backup (.4sb) in Settings to view PDFs here.</p>
+              <div className="mt-6">
+                <button
+                  onClick={() => setPdfModal(viewing)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded text-sm"
+                >
+                  View Chart
+                </button>
+              </div>
             </div>
-          } />
+          </div>
 
           {/* Metadata editor */}
           <div className="shrink-0 border-t bg-gray-50 p-4">
@@ -319,6 +327,14 @@ export default function LibraryPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {pdfModal && (
+        <PdfModal
+          filename={pdfModal.forscore_path}
+          title={pdfModal.display_title}
+          onClose={() => setPdfModal(null)}
+        />
       )}
     </div>
   );

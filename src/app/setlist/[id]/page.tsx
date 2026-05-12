@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import StatusBadge from '@/components/StatusBadge';
+import PdfModal from '@/components/PdfModal';
 import { Score } from '@/lib/types';
 import {
   getSetlist, updateSetlistItem, deleteSetlistItem,
@@ -45,6 +46,7 @@ export default function SetlistReviewPage() {
 
   const [addQuery, setAddQuery] = useState('');
   const [addResults, setAddResults] = useState<Score[]>([]);
+  const [pdfModal, setPdfModal] = useState<{ filename: string; title: string } | null>(null);
   const addRef = useRef<HTMLInputElement>(null);
 
   const [editingName, setEditingName] = useState(false);
@@ -401,6 +403,12 @@ export default function SetlistReviewPage() {
                 <td><StatusBadge status={item.match_status} /></td>
                 <td>
                   <div className="flex gap-1 flex-wrap items-center">
+                    {item.matched_forscore_path && (
+                      <button
+                        onClick={() => setPdfModal({ filename: item.matched_forscore_path!, title: item.requested_title })}
+                        className="text-indigo-600 hover:text-indigo-800 bg-transparent px-2 py-1 text-xs font-medium"
+                      >View</button>
+                    )}
                     <button onClick={() => openSearch(item.id)} className="text-blue-600 hover:text-blue-800 bg-transparent px-2 py-1 text-xs">Search</button>
                     <button onClick={() => handleUpdateItem(item.id, null, 'placeholder')} className="text-purple-600 hover:text-purple-800 bg-transparent px-2 py-1 text-xs">Placeholder</button>
                     {item.matched_score_id && (
@@ -466,6 +474,14 @@ export default function SetlistReviewPage() {
           )}
         </div>
       </div>
+
+      {pdfModal && (
+        <PdfModal
+          filename={pdfModal.filename}
+          title={pdfModal.title}
+          onClose={() => setPdfModal(null)}
+        />
+      )}
     </div>
   );
 }
