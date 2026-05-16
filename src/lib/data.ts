@@ -343,6 +343,15 @@ export function deleteSetlistItem(setlistId: number, itemId: number) {
   getClientDb().prepare('DELETE FROM setlist_items WHERE id = ? AND setlist_id = ?').run(itemId, setlistId);
 }
 
+export function addSeparatorItem(setlistId: number, title: string) {
+  const db = getClientDb();
+  const maxPos = (db.prepare('SELECT COALESCE(MAX(position),0) as max FROM setlist_items WHERE setlist_id = ?').get(setlistId) as any)?.max ?? 0;
+  db.prepare(`
+    INSERT INTO setlist_items (setlist_id, position, requested_title, matched_score_id, match_status, confidence, match_reason)
+    VALUES (?, ?, ?, NULL, 'placeholder', 0, NULL)
+  `).run(setlistId, maxPos + 1, title);
+}
+
 export function reorderSetlistItems(setlistId: number, itemIds: number[]) {
   const db = getClientDb();
   for (let i = 0; i < itemIds.length; i++) {

@@ -30,7 +30,7 @@ export default function AliasesPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 h-full overflow-auto">
       <h1 className="text-2xl font-bold mb-4">Aliases</h1>
       <p className="text-sm text-gray-500 mb-4">
         Aliases connect typed song names to existing score files.
@@ -61,7 +61,7 @@ export default function AliasesPage() {
                 <td className="text-xs text-gray-500">{alias.score_forscore_path}</td>
                 <td className="text-xs text-gray-500">{alias.source}</td>
                 <td>
-                  <button onClick={() => handleDelete(alias.id)} className="text-red-600 hover:text-red-800 bg-transparent px-2 py-1 text-xs">Delete</button>
+                  <button onClick={() => handleDelete(alias.id)} title="Remove this alias — the song name will no longer auto-match this score" className="text-red-600 hover:text-red-800 bg-transparent px-2 py-1 text-xs">Delete</button>
                 </td>
               </tr>
             ))}

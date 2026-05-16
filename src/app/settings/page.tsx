@@ -95,7 +95,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-lg p-6">
+    <div className="max-w-lg p-6 h-full overflow-auto">
       <h1 className="text-2xl font-bold mb-6">Settings</h1>
 
       <div className="bg-gray-50 rounded-lg p-4 mb-6">
@@ -123,10 +123,10 @@ export default function SettingsPage() {
       <div className="space-y-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-700">Import / Export</h2>
         <div className="flex gap-3">
-          <button onClick={() => fileRef.current?.click()} className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
+          <button onClick={() => fileRef.current?.click()} title="Load a previously exported .db file to restore your score library on this device" className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
             Import Database
           </button>
-          <button onClick={handleExportDb} className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm">
+          <button onClick={handleExportDb} title="Download your score library as a .db file — use this to back up or transfer to another device" className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm">
             Export Database
           </button>
         </div>
@@ -142,11 +142,11 @@ export default function SettingsPage() {
       <div className="space-y-4 mb-6">
         <h2 className="text-sm font-semibold text-gray-700">forScore Backup (PDFs)</h2>
         <div className="flex gap-3 flex-wrap">
-          <button onClick={() => backupRef.current?.click()} className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
+          <button onClick={() => backupRef.current?.click()} title="Select a .4sb forScore backup file to extract all PDF charts and add them to your library" className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
             Import forScore Backup (.4sb)
           </button>
           {pdfCount > 0 && stats.scores < pdfCount && (
-            <button onClick={handleRebuildLibrary} className="bg-amber-500 hover:bg-amber-600 text-white text-sm">
+            <button onClick={handleRebuildLibrary} title="Scan your stored PDFs and create missing score entries in the library" className="bg-amber-500 hover:bg-amber-600 text-white text-sm">
               Rebuild Library from Stored PDFs
             </button>
           )}
@@ -157,6 +157,7 @@ export default function SettingsPage() {
                 await clearPdfs();
                 setPdfCount(0);
               }}
+              title="Remove all stored PDF files from this device — score records and setlists will remain, but charts won't be viewable"
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
             >
               Clear PDFs
@@ -189,7 +190,7 @@ export default function SettingsPage() {
 
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h2>
-        <button onClick={handleClearDb} className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm">
+        <button onClick={handleClearDb} title="Delete all scores, setlists, aliases, and stored PDFs — this cannot be undone" className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm">
           Clear All Data
         </button>
       </div>

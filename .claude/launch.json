@@ -4,8 +4,8 @@
     {
       "name": "forscore-app",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "-p", "3333"],
-      "port": 3333
+      "runtimeArgs": ["run", "dev"],
+      "autoPort": true
     }
   ]
 }

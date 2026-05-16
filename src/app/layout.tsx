@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import { DbProvider } from '@/components/DbProvider';
+import { HelpModeProvider } from '@/lib/help-context';
+import HelpOverlay from '@/components/HelpOverlay';
 
 export const metadata: Metadata = {
   title: 'forScore Setlist Builder',
@@ -28,12 +30,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className="flex h-screen overflow-hidden bg-white">
-        <DbProvider>
-          <Sidebar />
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </DbProvider>
+        <HelpModeProvider>
+          <DbProvider>
+            <Sidebar />
+            <main className="flex-1 overflow-hidden h-full">
+              {children}
+            </main>
+          </DbProvider>
+          <HelpOverlay />
+        </HelpModeProvider>
       </body>
     </html>
   );

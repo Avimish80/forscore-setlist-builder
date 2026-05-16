@@ -28,7 +28,7 @@ export default function SetlistsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Saved Setlists</h1>
         <Link href="/setlist/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
@@ -58,8 +58,8 @@ export default function SetlistsPage() {
                 <td className="text-sm text-gray-500">{new Date(sl.created_at).toLocaleDateString('en-GB')}</td>
                 <td>
                   <div className="flex gap-2">
-                    <Link href={`/setlist/${sl.id}`} className="text-blue-600 hover:text-blue-800 text-xs">Review</Link>
-                    <button onClick={() => handleDelete(sl.id)} className="text-red-600 hover:text-red-800 bg-transparent px-2 py-1 text-xs">Delete</button>
+                    <Link href={`/setlist/${sl.id}`} title="Open this setlist to view, edit, and export it" className="text-blue-600 hover:text-blue-800 text-xs">Review</Link>
+                    <button onClick={() => handleDelete(sl.id)} title="Permanently delete this setlist" className="text-red-600 hover:text-red-800 bg-transparent px-2 py-1 text-xs">Delete</button>
                   </div>
                 </td>
               </tr>

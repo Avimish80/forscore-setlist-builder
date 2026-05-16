@@ -140,7 +140,7 @@ export default function WorkbenchPage() {
   const unreviewedCount = groups.filter(g => !g.all_reviewed).length;
 
   return (
-    <div className="flex h-[calc(100vh-48px)] overflow-hidden">
+    <div className="flex h-full overflow-hidden">
 
       {/* ── Left: group list ── */}
       <div className={`flex flex-col border-r overflow-hidden transition-all ${selected ? 'w-[36%]' : 'w-full max-w-3xl'}`}>
@@ -209,16 +209,16 @@ export default function WorkbenchPage() {
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {savedMsg && <span className="text-green-600 text-xs">Saved ✓</span>}
-              <button onClick={markAllReviewed} className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2 py-1">Mark All Reviewed</button>
-              <button onClick={handleSaveAll} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50 px-3 py-1.5">{saving ? 'Saving…' : 'Save All'}</button>
-              <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-700 bg-transparent text-lg leading-none">✕</button>
+              <button onClick={markAllReviewed} title="Set every version in this group to 'Reviewed' status" className="text-xs bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 px-2 py-1">Mark All Reviewed</button>
+              <button onClick={handleSaveAll} disabled={saving} title="Save all edits for every version in this group" className="bg-blue-600 hover:bg-blue-700 text-white text-sm disabled:opacity-50 px-3 py-1.5">{saving ? 'Saving…' : 'Save All'}</button>
+              <button onClick={() => setSelected(null)} title="Close the detail panel" className="text-gray-400 hover:text-gray-700 bg-transparent text-lg leading-none">✕</button>
             </div>
           </div>
 
           <div className="shrink-0 px-4 py-2 border-b bg-white flex items-center gap-2">
             <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Canonical title:</label>
             <input type="text" value={canonicalTitle} onChange={e => setCanonicalTitle(e.target.value)} className="flex-1 text-sm" />
-            <button onClick={applyTitleToAll} className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 whitespace-nowrap">Apply to All</button>
+            <button onClick={applyTitleToAll} title="Copy this title to every version in the group — makes all versions appear under one consistent name" className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 whitespace-nowrap">Apply to All</button>
           </div>
 
           <div className="overflow-y-auto flex-1">

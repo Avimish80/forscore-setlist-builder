@@ -29,7 +29,7 @@ export default function NewSetlistPage() {
   }
 
   return (
-    <div className="max-w-2xl p-6">
+    <div className="max-w-2xl p-6 h-full overflow-auto">
       <h1 className="text-2xl font-bold mb-4">New Setlist</h1>
       <p className="text-sm text-gray-500 mb-4">
         Paste your setlist below. The first line becomes the setlist name.

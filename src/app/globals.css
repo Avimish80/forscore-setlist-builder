@@ -25,3 +25,16 @@ th {
 td {
   @apply px-3 py-2 border-b border-gray-100;
 }
+
+/* ── Help mode ─────────────────────────────────────────────────────────── */
+/* When help mode is active, every element with a title attribute gets
+   a soft amber ring so the user knows they can hover for an explanation. */
+html.help-mode [title] {
+  outline: 2px solid #f59e0b !important;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+html.help-mode [title]:hover {
+  background-color: rgba(251, 191, 36, 0.12) !important;
+}
