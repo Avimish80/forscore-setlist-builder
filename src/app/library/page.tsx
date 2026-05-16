@@ -6,6 +6,7 @@ import { Score } from '@/lib/types';
 import { queryScores, updateScore, importScoresFromFiles, createAlias, getSetlists, addSetlistItem, createSetlist } from '@/lib/data';
 import InlinePdfViewer from '@/components/InlinePdfViewer';
 import StatusBadge from '@/components/StatusBadge';
+import { writeMetadataToPdf } from '@/lib/pdf-metadata';
 
 const LETTERS = ['#', ...Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'עב'];
 
@@ -42,6 +43,8 @@ export default function LibraryPage() {
   const [editFields, setEditFields] = useState<Partial<Score>>({});
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
+  const [pdfSaving, setPdfSaving] = useState(false);
+  const [pdfSavedMsg, setPdfSavedMsg] = useState(false);
   const [editMode, setEditMode] = useState(false); // persistent edit mode — form always shows when active
 
   const [aliasModal, setAliasModal] = useState<Score | null>(null);
@@ -92,6 +95,25 @@ export default function LibraryPage() {
     setSaving(false);
     setSavedMsg(true);
     setTimeout(() => setSavedMsg(false), 2500);
+  }
+
+  async function handleSaveAndPdf() {
+    if (!selected) return;
+    // Save to app first
+    handleSave();
+    // Then write into the PDF file
+    setPdfSaving(true);
+    const ok = await writeMetadataToPdf({
+      forscore_path: selected.forscore_path,
+      display_title: editFields.display_title ?? selected.display_title,
+      detected_key: (editFields.detected_key ?? selected.detected_key) ?? undefined,
+      version_label: (editFields.version_label ?? selected.version_label) ?? undefined,
+    });
+    setPdfSaving(false);
+    if (ok) {
+      setPdfSavedMsg(true);
+      setTimeout(() => setPdfSavedMsg(false), 3000);
+    }
   }
 
   function handleLetterClick(letter: string) {
@@ -482,14 +504,22 @@ export default function LibraryPage() {
               />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleSave}
                 disabled={saving}
-                title="Save changes to this score's metadata"
+                title="Save key, title, notes to this app only (forScore will not be affected)"
                 className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 text-sm px-4 py-1.5"
               >
-                {saving ? 'Saving…' : 'Save'}
+                {saving ? 'Saving…' : 'Save to app'}
+              </button>
+              <button
+                onClick={handleSaveAndPdf}
+                disabled={pdfSaving || saving}
+                title="Save to app AND write title + key into the PDF file — forScore will pick these up automatically"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 text-sm px-4 py-1.5"
+              >
+                {pdfSaving ? 'Updating PDF…' : 'Save + update PDF'}
               </button>
               <button
                 onClick={() => setAliasModal(selected)}
@@ -498,7 +528,8 @@ export default function LibraryPage() {
               >
                 + Alias
               </button>
-              {savedMsg && <span className="text-green-600 text-sm">Saved ✓</span>}
+              {savedMsg && !pdfSavedMsg && <span className="text-green-600 text-sm">Saved ✓</span>}
+              {pdfSavedMsg && <span className="text-indigo-600 text-sm font-medium">Saved + PDF updated ✓</span>}
             </div>
           </div>
         )}

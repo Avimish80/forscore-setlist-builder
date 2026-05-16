@@ -11,6 +11,7 @@ import {
   exportSetlistXml, searchScores, createAlias, renameSetlist,
   getScore, updateScore,
 } from '@/lib/data';
+import { writeMetadataToPdf } from '@/lib/pdf-metadata';
 
 const KEYS = [
   '', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
@@ -88,6 +89,8 @@ export default function SetlistReviewPage() {
   }>({ display_title: '', detected_key: '', version_label: '', status: 'new', notes: '' });
   const [showScoreEdit, setShowScoreEdit] = useState(false);
   const [scoreSaved, setScoreSaved] = useState(false);
+  const [pdfSaving, setPdfSaving] = useState(false);
+  const [pdfSaved, setPdfSaved] = useState(false);
   const displayTitleRef = useRef<HTMLInputElement>(null);
 
   // Alias modal (same as Library)
@@ -302,7 +305,24 @@ export default function SetlistReviewPage() {
     if (updated) setSelectedScore(updated);
     setScoreSaved(true);
     setTimeout(() => setScoreSaved(false), 2500);
-    load(); // refresh item list to reflect updated display title
+    load();
+  }
+
+  async function handleScoreSaveAndPdf() {
+    if (!selectedScore) return;
+    handleScoreSave();
+    setPdfSaving(true);
+    const ok = await writeMetadataToPdf({
+      forscore_path: selectedScore.forscore_path,
+      display_title: scoreEdit.display_title,
+      detected_key: scoreEdit.detected_key,
+      version_label: scoreEdit.version_label,
+    });
+    setPdfSaving(false);
+    if (ok) {
+      setPdfSaved(true);
+      setTimeout(() => setPdfSaved(false), 3000);
+    }
   }
 
   function handleEditTitle() {
@@ -884,10 +904,21 @@ export default function SetlistReviewPage() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button onClick={handleScoreSave} title="Save changes to this score's metadata" className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5">Save</button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={handleScoreSave}
+                    title="Save key, title, notes to this app only (forScore will not be affected)"
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5"
+                  >Save to app</button>
+                  <button
+                    onClick={handleScoreSaveAndPdf}
+                    disabled={pdfSaving}
+                    title="Save to app AND write title + key into the PDF file — forScore will pick these up automatically"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 text-sm px-4 py-1.5"
+                  >{pdfSaving ? 'Updating PDF…' : 'Save + update PDF'}</button>
                   <button onClick={() => setAliasModal(selectedScore)} title="Add an alternate name for this score — useful when a setlist uses a different title" className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-3 py-1.5">+ Alias</button>
-                  {scoreSaved && <span className="text-green-600 text-sm">Saved ✓</span>}
+                  {scoreSaved && !pdfSaved && <span className="text-green-600 text-sm">Saved ✓</span>}
+                  {pdfSaved && <span className="text-indigo-600 text-sm font-medium">Saved + PDF updated ✓</span>}
                 </div>
               </div>
             )}
