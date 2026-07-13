@@ -45,7 +45,7 @@ export default function AliasesPage() {
             <p className="text-zinc-500 text-sm">Add them from the Library or during setlist review.</p>
           </div>
         ) : (
-          <div className="panel overflow-hidden">
+          <div className="panel overflow-x-auto">
             <table>
               <thead>
                 <tr>

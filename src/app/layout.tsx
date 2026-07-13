@@ -29,11 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
-      <body className="flex h-dvh overflow-hidden bg-zinc-950">
+      <body className="flex flex-col md:flex-row h-dvh overflow-hidden bg-zinc-950">
         <HelpModeProvider>
           <DbProvider>
             <Sidebar />
-            <main className="flex-1 overflow-hidden h-full">
+            <main className="flex-1 overflow-hidden min-h-0">
               {children}
             </main>
           </DbProvider>

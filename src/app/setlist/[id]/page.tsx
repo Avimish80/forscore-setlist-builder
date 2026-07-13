@@ -56,6 +56,10 @@ export default function SetlistReviewPage() {
   // Selected item whose PDF shows on the right
   const [selectedItem, setSelectedItem] = useState<ItemRow | null>(null);
 
+  // Phone: one pane at a time. The page auto-selects the first matched song,
+  // so selection alone must NOT hide the list — only explicit view actions do.
+  const [mobilePane, setMobilePane] = useState<'list' | 'pdf'>('list');
+
   // Top search — add-only mode
   const [addQuery, setAddQuery] = useState('');
   const [addResults, setAddResults] = useState<Score[]>([]);
@@ -413,7 +417,7 @@ export default function SetlistReviewPage() {
   // ── Edit Order mode ───────────────────────────────────────────────────────
   if (editMode) {
     return (
-      <div className="flex flex-col h-screen bg-zinc-950">
+      <div className="flex flex-col h-dvh bg-zinc-950">
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-950 flex-shrink-0">
           <div>
             <h1 className="text-lg font-bold tracking-tight">{setlist.name}</h1>
@@ -466,8 +470,8 @@ export default function SetlistReviewPage() {
     <>
     <div className="flex h-full overflow-hidden" onClick={() => setStatusPickerFor(null)}>
 
-      {/* ── Left: setlist items ─────────────────────────────────────────── */}
-      <div className="flex flex-col w-[40%] min-w-[300px] border-r border-zinc-800 overflow-hidden">
+      {/* ── Left: setlist items — full width on phones, hidden while viewing a chart ── */}
+      <div className={`flex-col w-full md:w-[40%] md:min-w-[300px] border-r border-zinc-800 overflow-hidden ${mobilePane === 'pdf' ? 'hidden md:flex' : 'flex'}`}>
 
         {/* Header */}
         <div className="flex-shrink-0 px-3 py-2.5 border-b border-zinc-800 bg-zinc-950">
@@ -569,7 +573,7 @@ export default function SetlistReviewPage() {
                     >
                       {/* View area — click to preview PDF */}
                       <button
-                        onClick={() => setPreviewScore(score)}
+                        onClick={() => { setPreviewScore(score); setMobilePane('pdf'); }}
                         className="flex-1 text-left px-3 py-2 bg-transparent border-0 rounded-none"
                         title="Preview this score's PDF in the right panel"
                       >
@@ -634,6 +638,7 @@ export default function SetlistReviewPage() {
                     setStatusPickerFor(null);
                     if (item.matched_forscore_path) {
                       setSelectedItem(item);
+                      setMobilePane('pdf');
                       if (isSearching) setPreviewScore(null);
                     }
                   }}
@@ -683,7 +688,7 @@ export default function SetlistReviewPage() {
                 <div className="flex items-center gap-0.5 px-2 pb-1.5" onClick={e => e.stopPropagation()}>
                   {item.matched_forscore_path && (
                     <button
-                      onClick={() => { setSelectedItem(item); setStatusPickerFor(null); if (isSearching) setPreviewScore(null); }}
+                      onClick={() => { setSelectedItem(item); setStatusPickerFor(null); setMobilePane('pdf'); if (isSearching) setPreviewScore(null); }}
                       title="Show this song's chart in the right panel"
                       className={`text-[11px] px-2 py-1 rounded ${isSelected && !previewScore ? 'text-amber-300 bg-amber-400/10' : 'text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 bg-transparent'}`}
                     >
@@ -761,7 +766,7 @@ export default function SetlistReviewPage() {
                           >
                             {/* Click row to preview PDF */}
                             <button
-                              onClick={() => setPreviewScore(score)}
+                              onClick={() => { setPreviewScore(score); setMobilePane('pdf'); }}
                               className="flex-1 text-left px-3 py-2 bg-transparent border-0 rounded-none"
                               title="Preview this score's PDF in the right panel"
                             >
@@ -792,17 +797,35 @@ export default function SetlistReviewPage() {
         </div>
       </div>
 
-      {/* ── Right: PDF viewer ────────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      {/* ── Right: PDF viewer — full screen on phones while viewing ──────── */}
+      <div className={`flex-col flex-1 overflow-hidden ${mobilePane === 'pdf' ? 'flex' : 'hidden md:flex'}`}>
 
         {/* Preview banner — shown when browsing search results */}
         {previewScore && (
           <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 bg-amber-400/10 border-b border-amber-400/20 text-amber-200 text-xs">
+            <button
+              onClick={() => setMobilePane('list')}
+              title="Back to the setlist"
+              className="md:hidden text-amber-300 bg-transparent border-0 p-0 pr-1 text-sm font-medium flex-shrink-0"
+            >
+              ‹ Setlist
+            </button>
             <span className="font-semibold truncate flex-1">Previewing: {previewScore.display_title}</span>
-            {searchingFor
-              ? <span className="text-amber-300/60">Click &ldquo;Assign ✓&rdquo; to use this score</span>
-              : <span className="text-amber-300/60">Click &ldquo;+ Add&rdquo; to add to setlist</span>
-            }
+            {searchingFor ? (
+              <button
+                onClick={() => { handleAssignScore(searchingFor, previewScore); setMobilePane('list'); }}
+                className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs px-2.5 py-1 rounded font-semibold flex-shrink-0"
+              >
+                Assign ✓
+              </button>
+            ) : (
+              <button
+                onClick={() => { handleAddResult(previewScore); setMobilePane('list'); }}
+                className="bg-amber-400 hover:bg-amber-300 text-zinc-950 text-xs px-2.5 py-1 rounded font-semibold flex-shrink-0"
+              >
+                + Add
+              </button>
+            )}
           </div>
         )}
 
@@ -811,6 +834,13 @@ export default function SetlistReviewPage() {
           <div className="flex-shrink-0 border-b border-zinc-800 bg-zinc-900">
             {/* Top row */}
             <div className="flex items-center gap-2 px-3 py-2">
+              <button
+                onClick={() => setMobilePane('list')}
+                title="Back to the setlist"
+                className="md:hidden text-amber-300 bg-transparent border-0 p-0 pr-1 text-sm font-medium flex-shrink-0"
+              >
+                ‹ Setlist
+              </button>
               <div className="flex-1 min-w-0">
                 {/* Song name with ✎ shortcut to edit display title */}
                 <div className="flex items-center gap-1 group/title">

@@ -61,8 +61,34 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { helpMode, toggleHelp } = useHelpMode();
 
+  const isActive = (href: string) =>
+    pathname === href ||
+    pathname.startsWith(href + '/') ||
+    (href === '/setlists' && pathname.startsWith('/setlist'));
+
   return (
-    <aside className="w-16 bg-zinc-950 border-r border-zinc-800/70 h-dvh flex-shrink-0 flex flex-col items-center py-3 gap-1">
+    <>
+    {/* ── Phone: bottom tab bar ─────────────────────────────────────────── */}
+    <nav className="md:hidden order-last flex-shrink-0 flex items-stretch justify-around border-t border-zinc-800 bg-zinc-950 pb-[env(safe-area-inset-bottom)]">
+      {NAV_ITEMS.map(item => {
+        const active = isActive(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors ${
+              active ? 'text-amber-300' : 'text-zinc-500 active:text-zinc-200'
+            }`}
+          >
+            {item.icon}
+            <span className="text-[10px] leading-tight font-medium">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+
+    {/* ── Tablet / desktop: side rail ───────────────────────────────────── */}
+    <aside className="hidden md:flex w-16 bg-zinc-950 border-r border-zinc-800/70 h-dvh flex-shrink-0 flex-col items-center py-3 gap-1">
       {/* Wordmark */}
       <div className="h-10 flex items-center justify-center mb-2 text-amber-400">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
@@ -73,10 +99,7 @@ export default function Sidebar() {
       </div>
 
       {NAV_ITEMS.map(item => {
-        const active =
-          pathname === item.href ||
-          pathname.startsWith(item.href + '/') ||
-          (item.href === '/setlists' && pathname.startsWith('/setlist'));
+        const active = isActive(item.href);
         return (
           <div key={item.href} className="w-full px-1.5">
             <Link
@@ -116,5 +139,6 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+    </>
   );
 }
