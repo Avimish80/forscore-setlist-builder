@@ -184,11 +184,13 @@ export default function LibraryPage() {
   return (
     <div className="flex h-full overflow-hidden">
 
-      {/* ── Left: score list (38%) ──────────────────────────────────────── */}
-      <div className="flex flex-col w-[38%] min-w-[280px] border-r overflow-hidden">
+      {/* ── Left: score list — full width on phones, 38% on tablet/desktop ── */}
+      {/* On phones the list hides once a score is picked so the PDF gets the
+          whole screen; the ✕ / back button brings it back. */}
+      <div className={`flex-col w-full md:w-[38%] md:min-w-[280px] border-r border-zinc-800 overflow-hidden ${selected ? 'hidden md:flex' : 'flex'}`}>
 
         {/* Search + filter strip */}
-        <div className="flex-shrink-0 p-3 border-b bg-white space-y-2">
+        <div className="flex-shrink-0 p-3 border-b border-zinc-800 bg-zinc-950 space-y-2.5">
           <div className="flex gap-2 items-center">
             <input
               type="text"
@@ -215,7 +217,7 @@ export default function LibraryPage() {
           <div className="flex flex-wrap gap-0.5">
             <button
               onClick={() => { setActiveLetter(''); setSearch(''); }}
-              className={`px-1.5 py-0.5 rounded text-xs font-medium ${!activeLetter && !search ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+              className={`px-1.5 py-0.5 rounded text-xs font-medium ${!activeLetter && !search ? 'bg-amber-400/15 text-amber-300' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 bg-transparent'}`}
             >
               All
             </button>
@@ -223,7 +225,7 @@ export default function LibraryPage() {
               <button
                 key={l}
                 onClick={() => handleLetterClick(l)}
-                className={`px-1.5 py-0.5 rounded text-xs font-medium min-w-[1.4rem] text-center ${activeLetter === l ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
+                className={`px-1.5 py-0.5 rounded text-xs font-medium min-w-[1.4rem] text-center ${activeLetter === l ? 'bg-amber-400/15 text-amber-300' : 'text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 bg-transparent'}`}
               >
                 {l}
               </button>
@@ -235,15 +237,15 @@ export default function LibraryPage() {
             onDragOver={e => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={handleDrop}
-            className={`rounded p-2 border-2 border-dashed text-xs transition-colors ${dragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50'}`}
+            className={`rounded-lg p-2 border border-dashed text-xs transition-colors ${dragging ? 'border-amber-400/60 bg-amber-400/10' : 'border-zinc-700/70 bg-zinc-900/50'}`}
           >
-            <span className="text-gray-500">
+            <span className="text-zinc-500">
               Drop PDFs or{' '}
-              <button onClick={() => fileInputRef.current?.click()} title="Open file picker to select PDF score files to import" className="text-blue-600 hover:underline bg-transparent p-0 text-xs">
+              <button onClick={() => fileInputRef.current?.click()} title="Open file picker to select PDF score files to import" className="text-amber-300 hover:text-amber-200 bg-transparent p-0 text-xs">
                 browse
               </button>
             </span>
-            {importResult && <p className="text-green-600 mt-0.5">{importResult}</p>}
+            {importResult && <p className="text-emerald-400 mt-0.5">{importResult}</p>}
             <input
               ref={fileInputRef}
               type="file"
@@ -254,48 +256,46 @@ export default function LibraryPage() {
             />
           </div>
 
-          <p className="text-xs text-gray-400">{loading ? '…' : `${total} scores`}</p>
+          <p className="text-xs text-zinc-500 tabular-nums">{loading ? '…' : `${total} scores`}</p>
         </div>
 
         {/* Score list */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <p className="text-gray-400 text-sm p-4">Loading…</p>
+            <p className="text-zinc-500 text-sm p-4">Loading…</p>
           ) : total === 0 && !search && !statusFilter && !activeLetter ? (
-            <div className="text-center py-12 text-gray-400 px-4">
-              <p className="text-lg mb-1">No scores yet</p>
+            <div className="text-center py-12 text-zinc-500 px-4">
+              <p className="text-lg mb-1 text-zinc-300">No scores yet</p>
               <p className="text-sm">Drop PDF files above or import a database from Settings</p>
             </div>
           ) : scores.length === 0 ? (
-            <p className="text-gray-400 text-sm p-4">No results.</p>
+            <p className="text-zinc-500 text-sm p-4">No results.</p>
           ) : (
             <>
               {scores.map(score => (
                 <button
                   key={score.id}
                   onClick={() => handleSelect(score)}
-                  className={`w-full text-left px-3 py-2.5 border-b border-gray-100 hover:bg-blue-50 transition-colors block ${
-                    selected?.id === score.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'border-l-2 border-l-transparent'
+                  className={`w-full text-left px-3 py-2.5 border-b border-zinc-800/60 transition-colors block rounded-none ${
+                    selected?.id === score.id
+                      ? 'bg-zinc-800/50 border-l-2 border-l-amber-400'
+                      : 'border-l-2 border-l-transparent hover:bg-zinc-900'
                   }`}
                 >
-                  <p className="text-sm font-medium truncate">{score.display_title}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                    {score.detected_key && (
-                      <span className="text-xs bg-amber-100 text-amber-700 px-1 py-0.5 rounded">{score.detected_key}</span>
-                    )}
-                    {score.version_label && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-1 py-0.5 rounded">{score.version_label}</span>
-                    )}
-                    <span className="text-xs text-gray-400 truncate">{score.forscore_path}</span>
+                  <p className="text-sm font-medium truncate text-zinc-100">{score.display_title}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {score.detected_key && <span className="chip-key">{score.detected_key}</span>}
+                    {score.version_label && <span className="chip-inst">{score.version_label}</span>}
+                    <span className="text-xs text-zinc-600 truncate">{score.forscore_path}</span>
                   </div>
                 </button>
               ))}
 
               {showPagination && (
-                <div className="flex items-center gap-2 p-3 text-sm border-t">
-                  <button onClick={() => fetchScores(page - 1)} disabled={page === 1} title="Go to previous page" className="bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 px-2 py-1 text-xs">← Prev</button>
-                  <span className="text-gray-400 text-xs">{start}–{end} of {total}</span>
-                  <button onClick={() => fetchScores(page + 1)} disabled={page === totalPages} title="Go to next page" className="bg-gray-100 hover:bg-gray-200 text-gray-700 disabled:opacity-40 px-2 py-1 text-xs">Next →</button>
+                <div className="flex items-center gap-2 p-3 text-sm border-t border-zinc-800">
+                  <button onClick={() => fetchScores(page - 1)} disabled={page === 1} title="Go to previous page" className="btn-secondary disabled:opacity-40 px-2.5 py-1 text-xs">← Prev</button>
+                  <span className="text-zinc-500 text-xs tabular-nums">{start}–{end} of {total}</span>
+                  <button onClick={() => fetchScores(page + 1)} disabled={page === totalPages} title="Go to next page" className="btn-secondary disabled:opacity-40 px-2.5 py-1 text-xs">Next →</button>
                 </div>
               )}
             </>
@@ -303,44 +303,48 @@ export default function LibraryPage() {
         </div>
       </div>
 
-      {/* ── Right: PDF viewer + metadata (62%) ─────────────────────────── */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      {/* ── Right: PDF viewer + metadata — hidden on phones until a score is picked ── */}
+      <div className={`flex-col flex-1 overflow-hidden ${selected ? 'flex' : 'hidden md:flex'}`}>
 
         {/* Header strip — only when a score is selected */}
         {selected && (
           <>
           {/* "Added to setlist" confirmation banner */}
           {addedMsg && (
-            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 bg-green-50 border-b border-green-200 text-green-800 text-xs">
+            <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-400/10 border-b border-emerald-400/20 text-emerald-300 text-xs">
               <span className="flex-1 font-medium">{addedMsg.text} ✓</span>
               <button
                 onClick={() => router.push(addedMsg.link)}
-                className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-0.5 rounded"
+                className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 text-xs px-2 py-0.5 rounded"
               >
                 Open →
               </button>
-              <button onClick={() => setAddedMsg(null)} className="text-green-500 hover:text-green-700 bg-transparent p-0 text-sm leading-none">✕</button>
+              <button onClick={() => setAddedMsg(null)} className="text-emerald-400/70 hover:text-emerald-200 bg-transparent p-0 text-sm leading-none">✕</button>
             </div>
           )}
 
-          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b bg-gray-50">
+          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-zinc-800 bg-zinc-900">
+            {/* Mobile-only: back to the score list */}
+            <button
+              onClick={() => { setSelected(null); setEditMode(false); closePicker(); }}
+              title="Back to the score list"
+              className="md:hidden text-amber-300 bg-transparent border-0 p-0 pr-1 text-sm font-medium flex-shrink-0"
+            >
+              ‹ List
+            </button>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{selected.display_title}</p>
-              <p className="text-xs text-gray-400 truncate">{selected.forscore_path}</p>
+              <p className="text-sm font-semibold truncate text-zinc-100">{selected.display_title}</p>
+              <p className="text-xs text-zinc-500 truncate">{selected.forscore_path}</p>
             </div>
-            {selected.detected_key && (
-              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded flex-shrink-0">{selected.detected_key}</span>
-            )}
-            {selected.version_label && (
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded flex-shrink-0">{selected.version_label}</span>
-            )}
+            {selected.detected_key && <span className="chip-key">{selected.detected_key}</span>}
+            {selected.version_label && <span className="chip-inst">{selected.version_label}</span>}
 
             {/* Add to Setlist button + popover */}
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => { setSetlistPicker(v => !v); setNewSetlistMode(false); setNewSetlistName(''); }}
                 title="Add this score to one of your setlists, or create a new setlist"
-                className={`text-xs px-2.5 py-1 rounded ${setlistPicker ? 'bg-green-600 text-white' : 'bg-green-100 hover:bg-green-200 text-green-700'}`}
+                className={`text-xs px-2.5 py-1.5 rounded-lg ${setlistPicker ? 'bg-amber-400 text-zinc-950 font-semibold' : 'btn-secondary'}`}
               >
                 + Setlist
               </button>
@@ -350,35 +354,35 @@ export default function LibraryPage() {
                   {/* Invisible click-outside overlay */}
                   <div className="fixed inset-0 z-30" onClick={closePicker} />
                   {/* Popover */}
-                  <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-2xl z-40 overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                      <p className="text-xs font-semibold text-gray-600">Add to setlist</p>
+                  <div className="absolute right-0 top-full mt-1.5 w-64 bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 z-40 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-zinc-800">
+                      <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Add to setlist</p>
                     </div>
 
                     {/* Existing setlists */}
                     <div className="max-h-48 overflow-y-auto">
                       {allSetlists.length === 0 ? (
-                        <p className="text-xs text-gray-400 px-3 py-3 text-center">No setlists yet</p>
+                        <p className="text-xs text-zinc-500 px-3 py-3 text-center">No setlists yet</p>
                       ) : (
                         allSetlists.map(sl => (
                           <button
                             key={sl.id}
                             onClick={() => handleAddToSetlist(sl.id, sl.name)}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-blue-50 bg-transparent border-0 border-b border-gray-50 flex items-center gap-2"
+                            className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-800 bg-transparent border-0 border-b border-zinc-800/50 flex items-center gap-2 rounded-none"
                           >
                             <span className="flex-1 truncate">{sl.name}</span>
-                            <span className="text-blue-500 text-xs flex-shrink-0">+ Add</span>
+                            <span className="text-amber-300 text-xs flex-shrink-0">+ Add</span>
                           </button>
                         ))
                       )}
                     </div>
 
                     {/* New setlist section */}
-                    <div className="border-t border-gray-100 px-3 py-2">
+                    <div className="border-t border-zinc-800 px-3 py-2.5">
                       {!newSetlistMode ? (
                         <button
                           onClick={() => setNewSetlistMode(true)}
-                          className="w-full text-left text-xs text-gray-500 hover:text-green-700 bg-transparent border-0 p-0 flex items-center gap-1"
+                          className="w-full text-left text-xs text-zinc-400 hover:text-amber-300 bg-transparent border-0 p-0 flex items-center gap-1"
                         >
                           <span className="text-base leading-none">＋</span> Create new setlist with this song
                         </button>
@@ -399,7 +403,7 @@ export default function LibraryPage() {
                           <button
                             onClick={handleCreateAndAdd}
                             disabled={!newSetlistName.trim()}
-                            className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1 disabled:opacity-40"
+                            className="btn-primary text-xs px-2.5 py-1 disabled:opacity-40"
                           >
                             Create
                           </button>
@@ -414,14 +418,14 @@ export default function LibraryPage() {
             <button
               onClick={() => setEditMode(v => !v)}
               title={editMode ? 'Exit edit mode — click to stop editing scores' : 'Enter edit mode — click any score to edit its title, key, instrument, and status'}
-              className={`text-xs px-2.5 py-1 rounded flex-shrink-0 ${editMode ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+              className={`text-xs px-2.5 py-1.5 rounded-lg flex-shrink-0 ${editMode ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
             >
               {editMode ? 'Editing ✎' : 'Edit'}
             </button>
             <button
               onClick={() => { setSelected(null); setEditMode(false); closePicker(); }}
               title="Close the viewer and go back to browsing"
-              className="text-gray-400 hover:text-gray-700 bg-transparent text-lg leading-none flex-shrink-0"
+              className="btn-ghost text-lg leading-none flex-shrink-0 px-2 py-1"
             >
               ✕
             </button>
@@ -434,10 +438,14 @@ export default function LibraryPage() {
           <InlinePdfViewer
             filename={selected?.forscore_path ?? null}
             placeholder={
-              <div className="text-center text-gray-500">
-                <p className="text-5xl mb-4">🎵</p>
-                <p className="text-sm font-medium">Select a score</p>
-                <p className="text-xs mt-1 text-gray-400">Tap any song in the list to view its chart</p>
+              <div className="text-center text-zinc-500">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-zinc-700">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+                <p className="text-sm font-medium text-zinc-400">Select a score</p>
+                <p className="text-xs mt-1 text-zinc-600">Tap any song in the list to view its chart</p>
               </div>
             }
           />
@@ -445,10 +453,10 @@ export default function LibraryPage() {
 
         {/* Metadata edit form — shown when edit mode is active */}
         {selected && editMode && (
-          <div className="flex-shrink-0 border-t bg-gray-50 p-3">
+          <div className="flex-shrink-0 border-t border-zinc-800 bg-zinc-900 p-3">
             <div className="grid grid-cols-3 gap-2 mb-2">
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-0.5">Display Title</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Display Title</label>
                 <input
                   type="text"
                   value={editFields.display_title || ''}
@@ -457,7 +465,7 @@ export default function LibraryPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-0.5">Status</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Status</label>
                 <select
                   value={editFields.status || 'new'}
                   onChange={e => setEditFields(f => ({ ...f, status: e.target.value as Score['status'] }))}
@@ -471,7 +479,7 @@ export default function LibraryPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-0.5">Key</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Key</label>
                 <select
                   value={editFields.detected_key || ''}
                   onChange={e => setEditFields(f => ({ ...f, detected_key: e.target.value }))}
@@ -481,7 +489,7 @@ export default function LibraryPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-0.5">Instrument</label>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Instrument</label>
                 <select
                   value={editFields.version_label || ''}
                   onChange={e => setEditFields(f => ({ ...f, version_label: e.target.value }))}
@@ -493,8 +501,8 @@ export default function LibraryPage() {
             </div>
 
             {/* Notes — full-width, separate from the metadata grid */}
-            <div className="border-t border-gray-200 pt-2 mt-1 mb-2">
-              <label className="block text-xs font-medium text-gray-500 mb-0.5">Notes / Comments</label>
+            <div className="border-t border-zinc-800 pt-2 mt-1 mb-2.5">
+              <label className="block text-xs font-medium text-zinc-500 mb-1">Notes / Comments</label>
               <textarea
                 value={editFields.notes || ''}
                 onChange={e => setEditFields(f => ({ ...f, notes: e.target.value }))}
@@ -506,30 +514,30 @@ export default function LibraryPage() {
 
             <div className="flex items-center gap-2 flex-wrap">
               <button
-                onClick={handleSave}
-                disabled={saving}
-                title="Save key, title, notes to this app only (forScore will not be affected)"
-                className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 text-sm px-4 py-1.5"
-              >
-                {saving ? 'Saving…' : 'Save to app'}
-              </button>
-              <button
                 onClick={handleSaveAndPdf}
                 disabled={pdfSaving || saving}
                 title="Save to app AND write title + key into the PDF file — forScore will pick these up automatically"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 text-sm px-4 py-1.5"
+                className="btn-primary disabled:opacity-50 text-sm px-4 py-1.5"
               >
                 {pdfSaving ? 'Updating PDF…' : 'Save + update PDF'}
               </button>
               <button
+                onClick={handleSave}
+                disabled={saving}
+                title="Save key, title, notes to this app only (forScore will not be affected)"
+                className="btn-secondary disabled:opacity-50 text-sm px-4 py-1.5"
+              >
+                {saving ? 'Saving…' : 'Save to app'}
+              </button>
+              <button
                 onClick={() => setAliasModal(selected)}
                 title="Add an alternate name for this score — useful when a setlist uses a different title"
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-3 py-1.5"
+                className="btn-ghost text-sm px-3 py-1.5"
               >
                 + Alias
               </button>
-              {savedMsg && !pdfSavedMsg && <span className="text-green-600 text-sm">Saved ✓</span>}
-              {pdfSavedMsg && <span className="text-indigo-600 text-sm font-medium">Saved + PDF updated ✓</span>}
+              {savedMsg && !pdfSavedMsg && <span className="text-emerald-400 text-sm">Saved ✓</span>}
+              {pdfSavedMsg && <span className="text-amber-300 text-sm font-medium">Saved + PDF updated ✓</span>}
             </div>
           </div>
         )}
@@ -538,15 +546,15 @@ export default function LibraryPage() {
       {/* ── Alias modal ─────────────────────────────────────────────────── */}
       {aliasModal && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
           onClick={() => setAliasModal(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+            className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-6 w-full max-w-md"
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold mb-2">Add Alias</h2>
-            <p className="text-sm text-gray-500 mb-3">For: <strong>{aliasModal.display_title}</strong></p>
+            <h2 className="text-lg font-bold mb-2 text-zinc-100">Add Alias</h2>
+            <p className="text-sm text-zinc-400 mb-3">For: <strong className="text-zinc-200">{aliasModal.display_title}</strong></p>
             <input
               type="text"
               placeholder="Alias text"
@@ -557,8 +565,8 @@ export default function LibraryPage() {
               autoFocus
             />
             <div className="flex justify-end gap-2">
-              <button onClick={() => setAliasModal(null)} className="bg-gray-100 hover:bg-gray-200 text-gray-700">Cancel</button>
-              <button onClick={handleAddAlias} className="bg-green-600 hover:bg-green-700 text-white">Add Alias</button>
+              <button onClick={() => setAliasModal(null)} className="btn-ghost">Cancel</button>
+              <button onClick={handleAddAlias} className="btn-primary">Add Alias</button>
             </div>
           </div>
         </div>

@@ -21,7 +21,7 @@ const NAV_ITEMS = [
     title: 'Workbench — review and clean up scores in bulk. Group songs that appear in multiple versions (different keys or instruments) and set canonical names.',
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+        <path fillRule="evenodd" d="M6.672 1.911a1 1 0 10-1.932.518l.259.966a1 1 0 001.932-.518l-.26-.966zM2.429 4.74a1 1 0 10-.517 1.932l.966.259a1 1 0 00.517-1.932l-.966-.26zm8.814-.569a1 1 0 00-1.415-1.414l-.707.707a1 1 0 101.415 1.415l.707-.708zm-7.071 7.072l.707-.707A1 1 0 003.465 9.12l-.708.707a1 1 0 001.415 1.415zm3.2-5.171a1 1 0 00-1.3 1.3l4 10a1 1 0 001.823.075l1.38-2.759 3.018 3.02a1 1 0 001.414-1.415l-3.019-3.02 2.76-1.379a1 1 0 00-.076-1.822l-10-4z" clipRule="evenodd" />
       </svg>
     ),
   },
@@ -62,21 +62,30 @@ export default function Sidebar() {
   const { helpMode, toggleHelp } = useHelpMode();
 
   return (
-    <aside className="w-16 bg-gray-900 text-white h-screen flex-shrink-0 flex flex-col items-center py-3 gap-1">
+    <aside className="w-16 bg-zinc-950 border-r border-zinc-800/70 h-dvh flex-shrink-0 flex flex-col items-center py-3 gap-1">
+      {/* Wordmark */}
+      <div className="h-10 flex items-center justify-center mb-2 text-amber-400">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" />
+          <circle cx="18" cy="16" r="3" />
+        </svg>
+      </div>
+
       {NAV_ITEMS.map(item => {
         const active =
           pathname === item.href ||
           pathname.startsWith(item.href + '/') ||
           (item.href === '/setlists' && pathname.startsWith('/setlist'));
         return (
-          <div key={item.href} className="w-full px-1">
+          <div key={item.href} className="w-full px-1.5">
             <Link
               href={item.href}
               title={item.title}
-              className={`flex flex-col items-center gap-0.5 w-full py-2.5 rounded transition-colors ${
+              className={`flex flex-col items-center gap-0.5 w-full py-2.5 rounded-xl transition-colors ${
                 active
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-zinc-800/80 text-amber-300'
+                  : 'text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200'
               }`}
             >
               {item.icon}
@@ -90,17 +99,16 @@ export default function Sidebar() {
       <div className="flex-1" />
 
       {/* Help toggle */}
-      <div className="w-full px-1 mb-1">
+      <div className="w-full px-1.5 mb-1">
         <button
           onClick={toggleHelp}
           title="Toggle help mode — highlights every button so you can hover to learn what it does"
-          className={`flex flex-col items-center gap-0.5 w-full py-2.5 rounded transition-colors ${
+          className={`flex flex-col items-center gap-0.5 w-full py-2.5 rounded-xl transition-colors ${
             helpMode
-              ? 'bg-amber-400 text-gray-900'
-              : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+              ? 'bg-amber-400 text-zinc-950'
+              : 'text-zinc-500 hover:bg-zinc-800/60 hover:text-zinc-200'
           }`}
         >
-          {/* Question mark icon */}
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
           </svg>

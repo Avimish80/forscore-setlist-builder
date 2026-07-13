@@ -96,58 +96,39 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-lg p-6 h-full overflow-auto">
-      <h1 className="text-2xl font-bold mb-6">Settings</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-6">Settings</h1>
 
-      <div className="bg-gray-50 rounded-lg p-4 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-2">Database</h2>
+      <div className="panel p-5 mb-6">
+        <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">Database</h2>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-2xl font-bold text-blue-600">{stats.scores}</p>
-            <p className="text-xs text-gray-500">Scores</p>
+            <p className="text-2xl font-bold text-amber-300 tabular-nums">{stats.scores}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Scores</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-green-600">{stats.setlists}</p>
-            <p className="text-xs text-gray-500">Setlists</p>
+            <p className="text-2xl font-bold text-emerald-300 tabular-nums">{stats.setlists}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Setlists</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-purple-600">{stats.aliases}</p>
-            <p className="text-xs text-gray-500">Aliases</p>
+            <p className="text-2xl font-bold text-violet-300 tabular-nums">{stats.aliases}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Aliases</p>
           </div>
         </div>
         {pdfCount > 0 && (
-          <p className="text-xs text-green-600 mt-3">📄 {pdfCount} PDFs stored locally</p>
+          <p className="text-xs text-emerald-300 mt-4">{pdfCount} PDFs stored locally</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">Data is stored locally on this device.</p>
+        <p className="text-xs text-zinc-500 mt-1">Data is stored locally on this device.</p>
       </div>
 
-      <div className="space-y-4 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700">Import / Export</h2>
-        <div className="flex gap-3">
-          <button onClick={() => fileRef.current?.click()} title="Load a previously exported .db file to restore your score library on this device" className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
-            Import Database
-          </button>
-          <button onClick={handleExportDb} title="Download your score library as a .db file — use this to back up or transfer to another device" className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm">
-            Export Database
-          </button>
-        </div>
-        <input ref={fileRef} type="file" accept=".db,.sqlite,.sqlite3" className="hidden" onChange={handleImportDb} />
-        <p className="text-xs text-gray-500">
-          Import a <code>.db</code> file to load your score library. Export saves a copy for other devices.
-        </p>
-        {importMsg && (
-          <p className={`text-sm ${importMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}>{importMsg}</p>
-        )}
-      </div>
-
-      <div className="space-y-4 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700">forScore Backup (PDFs)</h2>
-        <div className="flex gap-3 flex-wrap">
-          <button onClick={() => backupRef.current?.click()} title="Select a .4sb forScore backup file to extract all PDF charts and add them to your library" className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm">
+      <div className="panel p-5 mb-6">
+        <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">forScore Backup (PDFs)</h2>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => backupRef.current?.click()} title="Select a .4sb forScore backup file to extract all PDF charts and add them to your library" className="btn-primary text-sm">
             Import forScore Backup (.4sb)
           </button>
           {pdfCount > 0 && stats.scores < pdfCount && (
-            <button onClick={handleRebuildLibrary} title="Scan your stored PDFs and create missing score entries in the library" className="bg-amber-500 hover:bg-amber-600 text-white text-sm">
-              Rebuild Library from Stored PDFs
+            <button onClick={handleRebuildLibrary} title="Scan your stored PDFs and create missing score entries in the library" className="btn-secondary text-sm">
+              Rebuild Library
             </button>
           )}
           {pdfCount > 0 && (
@@ -158,51 +139,66 @@ export default function SettingsPage() {
                 setPdfCount(0);
               }}
               title="Remove all stored PDF files from this device — score records and setlists will remain, but charts won't be viewable"
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm"
+              className="btn-ghost text-sm"
             >
               Clear PDFs
             </button>
           )}
         </div>
         <input ref={backupRef} type="file" accept=".4sb" className="hidden" onChange={handleImportBackup} />
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-zinc-500 mt-3">
           Imports all charts from a forScore backup. In forScore, tap Tools → Backup → Save, then transfer the .4sb file to your iPad and import here.
         </p>
         {backupProgress && (
-          <div>
-            <div className="w-full bg-gray-200 rounded-full h-3 mt-2">
+          <div className="mt-3">
+            <div className="w-full bg-zinc-800 rounded-full h-2.5">
               <div
-                className="bg-indigo-600 h-3 rounded-full transition-all"
+                className="bg-amber-400 h-2.5 rounded-full transition-all"
                 style={{ width: `${backupProgress.total ? (backupProgress.done / backupProgress.total) * 100 : 0}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1 truncate">
+            <p className="text-xs text-zinc-500 mt-1.5 truncate">
               {backupProgress.done} / {backupProgress.total} — {backupProgress.currentFile}
             </p>
           </div>
         )}
         {backupMsg && !backupProgress && (
-          <p className={`text-sm ${backupMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}>{backupMsg}</p>
+          <p className={`text-sm mt-3 ${backupMsg.includes('failed') ? 'text-red-400' : 'text-emerald-300'}`}>{backupMsg}</p>
         )}
       </div>
 
-      <hr className="my-6" />
+      <div className="panel p-5 mb-6">
+        <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">Import / Export</h2>
+        <div className="flex gap-2">
+          <button onClick={() => fileRef.current?.click()} title="Load a previously exported .db file to restore your score library on this device" className="btn-secondary text-sm">
+            Import Database
+          </button>
+          <button onClick={handleExportDb} title="Download your score library as a .db file — use this to back up or transfer to another device" className="btn-secondary text-sm">
+            Export Database
+          </button>
+        </div>
+        <p className="text-xs text-zinc-500 mt-3">
+          Import a <code className="text-zinc-400">.db</code> file to load your score library. Export saves a copy for other devices.
+        </p>
+        {importMsg && (
+          <p className={`text-sm mt-3 ${importMsg.includes('failed') ? 'text-red-400' : 'text-emerald-300'}`}>{importMsg}</p>
+        )}
+        <input ref={fileRef} type="file" accept=".db,.sqlite,.sqlite3" className="hidden" onChange={handleImportDb} />
+      </div>
 
-      <div className="mb-6">
-        <h2 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h2>
-        <button onClick={handleClearDb} title="Delete all scores, setlists, aliases, and stored PDFs — this cannot be undone" className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-sm">
+      <div className="panel p-5 mb-6 border-red-400/20">
+        <h2 className="text-[11px] font-semibold text-red-400 uppercase tracking-wider mb-3">Danger Zone</h2>
+        <button onClick={handleClearDb} title="Delete all scores, setlists, aliases, and stored PDFs — this cannot be undone" className="btn-danger text-sm">
           Clear All Data
         </button>
       </div>
 
-      <hr className="my-6" />
-
-      <div>
-        <h2 className="text-lg font-semibold mb-2">About</h2>
-        <p className="text-sm text-gray-600 mb-2">
+      <div className="px-1">
+        <h2 className="text-sm font-semibold text-zinc-300 mb-2">About</h2>
+        <p className="text-sm text-zinc-500 mb-2">
           forScore Setlist Builder helps you manage your PDF score library and generate .4ss setlist files.
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-zinc-500">
           Install on iPad: tap Share → Add to Home Screen.
         </p>
       </div>

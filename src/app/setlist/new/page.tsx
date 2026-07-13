@@ -30,15 +30,15 @@ export default function NewSetlistPage() {
 
   return (
     <div className="max-w-2xl p-6 h-full overflow-auto">
-      <h1 className="text-2xl font-bold mb-4">New Setlist</h1>
-      <p className="text-sm text-gray-500 mb-4">
+      <h1 className="text-2xl font-bold tracking-tight mb-1">New Setlist</h1>
+      <p className="text-sm text-zinc-500 mb-5">
         Paste your setlist below. The first line becomes the setlist name.
         Each following line is a song. Duplicates are allowed.
       </p>
 
-      <div className="bg-gray-50 rounded p-3 mb-4 text-xs text-gray-500">
-        <strong>Example:</strong>
-        <pre className="mt-1">
+      <div className="panel p-4 mb-4 text-xs text-zinc-400">
+        <p className="font-semibold text-zinc-300 uppercase tracking-wider text-[10px] mb-2">Example</p>
+        <pre className="font-mono text-zinc-400 leading-relaxed">
 {`Wedding Dinner 12 May
 1. Yidden
 2. Vezakeni
@@ -55,13 +55,13 @@ export default function NewSetlistPage() {
         className="w-full font-mono text-sm"
       />
 
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+      {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
 
       <div className="flex gap-2 mt-4">
         <button
           onClick={handleSubmit}
           disabled={loading || !text.trim()}
-          className="bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+          className="btn-primary disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Create Setlist & Match'}
         </button>

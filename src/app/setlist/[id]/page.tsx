@@ -405,23 +405,23 @@ export default function SetlistReviewPage() {
     setEditingName(false);
   }
 
-  if (loading) return <p className="text-gray-500 p-6">Loading...</p>;
-  if (!setlist) return <p className="text-red-600 p-6">Setlist not found.</p>;
+  if (loading) return <p className="text-zinc-500 p-6">Loading...</p>;
+  if (!setlist) return <p className="text-red-400 p-6">Setlist not found.</p>;
 
   const matched = items.filter(i => i.match_status === 'matched').length;
 
   // ── Edit Order mode ───────────────────────────────────────────────────────
   if (editMode) {
     return (
-      <div className="flex flex-col h-screen bg-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-white flex-shrink-0">
+      <div className="flex flex-col h-screen bg-zinc-950">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-950 flex-shrink-0">
           <div>
-            <h1 className="text-lg font-bold">{setlist.name}</h1>
-            <p className="text-xs text-orange-600">Hold a row and drag to reorder • Tap ✕ to remove</p>
+            <h1 className="text-lg font-bold tracking-tight">{setlist.name}</h1>
+            <p className="text-xs text-amber-300/80">Hold a row and drag to reorder • Tap ✕ to remove</p>
           </div>
           <button
             onClick={exitEditMode}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold text-sm"
+            className="btn-primary px-5 py-2 rounded-lg text-sm"
           >
             Done
           </button>
@@ -434,25 +434,25 @@ export default function SetlistReviewPage() {
               data-row-index={index}
               onTouchStart={() => handleTouchStart(index)}
               onTouchEnd={handleTouchEnd}
-              className={`flex items-center gap-3 px-4 py-3 border-b select-none ${
+              className={`flex items-center gap-3 px-4 py-3 border-b border-zinc-800/70 select-none ${
                 draggingIndex === index
-                  ? 'bg-blue-100 shadow-md opacity-80 scale-[1.01]'
-                  : 'bg-white active:bg-gray-50'
+                  ? 'bg-amber-400/10 ring-1 ring-inset ring-amber-400/40 opacity-90 scale-[1.01]'
+                  : 'bg-zinc-950 active:bg-zinc-900'
               }`}
               style={{ transition: 'background 0.1s' }}
             >
-              <span className="text-gray-300 text-2xl flex-shrink-0 pr-1">⠿</span>
-              <span className="text-gray-400 text-sm w-6 flex-shrink-0">{index + 1}</span>
+              <span className="text-zinc-600 text-2xl flex-shrink-0 pr-1">⠿</span>
+              <span className="text-zinc-500 text-sm w-6 flex-shrink-0 tabular-nums">{index + 1}</span>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{item.requested_title}</p>
+                <p className="font-medium text-sm truncate text-zinc-100">{item.requested_title}</p>
                 {item.matched_display_title && (
-                  <p className="text-xs text-gray-400 truncate">→ {item.matched_display_title}</p>
+                  <p className="text-xs text-zinc-500 truncate">→ {item.matched_display_title}</p>
                 )}
               </div>
               <button
                 onTouchStart={e => e.stopPropagation()}
                 onClick={() => handleRemoveItem(item.id)}
-                className="text-red-400 hover:text-red-600 text-xl px-2 flex-shrink-0 bg-transparent border-0"
+                className="text-red-400/60 hover:text-red-400 text-xl px-2 flex-shrink-0 bg-transparent border-0"
               >✕</button>
             </div>
           ))}
@@ -467,10 +467,10 @@ export default function SetlistReviewPage() {
     <div className="flex h-full overflow-hidden" onClick={() => setStatusPickerFor(null)}>
 
       {/* ── Left: setlist items ─────────────────────────────────────────── */}
-      <div className="flex flex-col w-[40%] min-w-[300px] border-r overflow-hidden">
+      <div className="flex flex-col w-[40%] min-w-[300px] border-r border-zinc-800 overflow-hidden">
 
         {/* Header */}
-        <div className="flex-shrink-0 px-3 py-2 border-b bg-white">
+        <div className="flex-shrink-0 px-3 py-2.5 border-b border-zinc-800 bg-zinc-950">
           {/* Setlist name */}
           <div className="flex items-center justify-between gap-2 mb-0.5">
             {editingName ? (
@@ -480,31 +480,31 @@ export default function SetlistReviewPage() {
                 onChange={e => setNameValue(e.target.value)}
                 onBlur={handleSaveName}
                 onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
-                className="text-base font-bold border-b-2 border-blue-500 outline-none bg-transparent flex-1"
+                className="text-base font-bold border-0 border-b-2 border-amber-400 rounded-none outline-none bg-transparent flex-1 px-0 py-0 focus:ring-0"
                 autoFocus
               />
             ) : (
               <button
                 onClick={() => { setNameValue(setlist.name); setEditingName(true); }}
-                className="flex items-center gap-1.5 group bg-transparent border-0 p-0 text-left flex-1 min-w-0"
+                className="flex items-center gap-1.5 group bg-transparent border-0 p-0 text-left flex-1 min-w-0 rounded-none"
               >
-                <h1 className="text-base font-bold truncate">{setlist.name}</h1>
-                <span className="text-gray-400 opacity-0 group-hover:opacity-100 text-sm flex-shrink-0">✎</span>
+                <h1 className="text-base font-bold tracking-tight truncate text-zinc-100">{setlist.name}</h1>
+                <span className="text-zinc-500 opacity-0 group-hover:opacity-100 text-sm flex-shrink-0">✎</span>
               </button>
             )}
           </div>
-          <p className="text-xs text-gray-400 mb-2">{matched}/{items.length} matched</p>
+          <p className="text-xs text-zinc-500 mb-2.5 tabular-nums">{matched}/{items.length} matched</p>
 
           {/* Action buttons */}
           <div className="flex gap-1.5 flex-wrap">
-            <button onClick={() => { rematchSetlist(id); load(); }} title="Re-run automatic matching for all songs against your library" className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs px-2 py-1">Re-match</button>
-            <button onClick={enterEditMode} title="Drag and drop to change the song order." className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-2 py-1">Edit Order</button>
-            <button onClick={handlePrint} title="Open a print-friendly version of this setlist" className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-2 py-1">Print</button>
-            <button onClick={handleSendToForScore} title="Export and share the .4ss setlist file — opens directly in forScore" className="bg-green-600 hover:bg-green-700 text-white text-xs px-2 py-1">Save Set List</button>
+            <button onClick={handleSendToForScore} title="Export and share the .4ss setlist file — opens directly in forScore" className="btn-primary text-xs px-3 py-1.5 rounded-md">Save Set List</button>
+            <button onClick={() => { rematchSetlist(id); load(); }} title="Re-run automatic matching for all songs against your library" className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Re-match</button>
+            <button onClick={enterEditMode} title="Drag and drop to change the song order." className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Edit Order</button>
+            <button onClick={handlePrint} title="Open a print-friendly version of this setlist" className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Print</button>
             <button
               onClick={() => setShowSepInput(v => !v)}
               title="Add a section separator (e.g. 'First Half', 'Dinner Break') to divide the setlist"
-              className={`text-xs px-2 py-1 ${showSepInput ? 'bg-purple-600 text-white' : 'bg-purple-100 hover:bg-purple-200 text-purple-700'}`}
+              className={`text-xs px-2.5 py-1.5 rounded-md ${showSepInput ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
             >+ Separator</button>
           </div>
 
@@ -523,13 +523,13 @@ export default function SetlistReviewPage() {
                 }}
                 className="flex-1 text-sm"
               />
-              <button onClick={handleAddSeparator} className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1">Add</button>
-              <button onClick={() => { setShowSepInput(false); setSepTitle(''); }} className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs px-2 py-1">✕</button>
+              <button onClick={handleAddSeparator} className="btn-primary text-xs px-3 py-1">Add</button>
+              <button onClick={() => { setShowSepInput(false); setSepTitle(''); }} className="btn-ghost text-xs px-2 py-1">✕</button>
             </div>
           )}
 
           {/* ── Add song search box (add-only) ── */}
-          <div className="mt-2">
+          <div className="mt-2.5">
             <input
               ref={addRef}
               type="text"
@@ -545,16 +545,16 @@ export default function SetlistReviewPage() {
           </div>
         </div>
 
-        {/* ── Add-song search results (amber tinted, clearly "add" zone) ── */}
+        {/* ── Add-song search results — clearly separated "add" zone ── */}
         {addQuery.length >= 1 && (
-          <div className="flex-shrink-0 border-b bg-amber-50 overflow-y-auto" style={{ maxHeight: '40%' }}>
-            <div className="px-3 pt-1.5 pb-0.5">
-              <span className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Add to setlist:</span>
+          <div className="flex-shrink-0 border-b border-zinc-800 bg-zinc-900 overflow-y-auto" style={{ maxHeight: '40%' }}>
+            <div className="px-3 pt-2 pb-1">
+              <span className="text-[10px] font-semibold text-amber-300/90 uppercase tracking-widest">Add to setlist</span>
             </div>
             {addResults.length === 0 ? (
               <div className="px-3 py-2.5 flex items-center justify-between">
-                <span className="text-xs text-gray-400">No library match for &ldquo;{addQuery}&rdquo;</span>
-                <button onClick={handleAddByName} className="text-xs bg-gray-100 hover:bg-amber-100 text-gray-700 hover:text-amber-800 px-2 py-1 rounded">
+                <span className="text-xs text-zinc-500">No library match for &ldquo;{addQuery}&rdquo;</span>
+                <button onClick={handleAddByName} className="btn-secondary text-xs px-2 py-1 rounded">
                   Add unmatched
                 </button>
               </div>
@@ -565,26 +565,26 @@ export default function SetlistReviewPage() {
                   return (
                     <div
                       key={score.id}
-                      className={`flex items-stretch border-b border-amber-100 ${isPreviewing ? 'bg-blue-50' : 'hover:bg-amber-100'}`}
+                      className={`flex items-stretch border-b border-zinc-800/60 ${isPreviewing ? 'bg-zinc-800/70' : 'hover:bg-zinc-800/50'}`}
                     >
                       {/* View area — click to preview PDF */}
                       <button
                         onClick={() => setPreviewScore(score)}
-                        className="flex-1 text-left px-3 py-2 bg-transparent border-0"
+                        className="flex-1 text-left px-3 py-2 bg-transparent border-0 rounded-none"
                         title="Preview this score's PDF in the right panel"
                       >
                         <div className="flex items-center gap-1.5">
-                          <span className="font-medium text-sm truncate flex-1">{score.display_title}</span>
-                          {score.detected_key && <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded flex-shrink-0">{score.detected_key}</span>}
-                          {score.version_label && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded flex-shrink-0">{score.version_label}</span>}
-                          {isPreviewing && <span className="text-xs text-blue-500 flex-shrink-0">▶</span>}
+                          <span className="font-medium text-sm truncate flex-1 text-zinc-100">{score.display_title}</span>
+                          {score.detected_key && <span className="chip-key">{score.detected_key}</span>}
+                          {score.version_label && <span className="chip-inst">{score.version_label}</span>}
+                          {isPreviewing && <span className="text-xs text-amber-300 flex-shrink-0">▶</span>}
                         </div>
-                        <span className="text-xs text-gray-400 block truncate mt-0.5">{score.forscore_path}</span>
+                        <span className="text-xs text-zinc-600 block truncate mt-0.5">{score.forscore_path}</span>
                       </button>
                       {/* Add button */}
                       <button
                         onClick={() => handleAddResult(score)}
-                        className="flex-shrink-0 px-3 border-l border-amber-200 bg-transparent hover:bg-green-600 text-green-700 hover:text-white text-xs font-semibold transition-colors"
+                        className="flex-shrink-0 px-3 border-l border-zinc-800 bg-transparent hover:bg-amber-400 text-amber-300 hover:text-zinc-950 text-xs font-semibold transition-colors rounded-none"
                       >
                         + Add
                       </button>
@@ -593,11 +593,11 @@ export default function SetlistReviewPage() {
                 })}
                 <button
                   onClick={handleAddByName}
-                  className="block w-full text-left px-3 py-2 bg-amber-50 border-0 hover:bg-amber-100 text-gray-500 hover:text-amber-800"
+                  className="block w-full text-left px-3 py-2 bg-transparent border-0 hover:bg-zinc-800/50 text-zinc-500 hover:text-amber-300 rounded-none"
                 >
                   <span className="text-xs">+ Add </span>
                   <span className="text-xs font-semibold">&ldquo;{addQuery}&rdquo;</span>
-                  <span className="text-xs text-gray-400"> as unmatched (no PDF)</span>
+                  <span className="text-xs text-zinc-600"> as unmatched (no PDF)</span>
                 </button>
               </>
             )}
@@ -621,13 +621,11 @@ export default function SetlistReviewPage() {
                 onDragEnter={() => handleDragEnter(index)}
                 onDragEnd={handleDrop}
                 onDragOver={e => e.preventDefault()}
-                className={`border-b transition-colors ${
-                  isSearching
-                    ? 'bg-blue-50 border-l-2 border-l-blue-500'
-                    : isSelected
-                    ? 'bg-blue-50 border-l-2 border-l-blue-500'
-                    : 'border-l-2 border-l-transparent hover:bg-gray-50'
-                } ${isSeparator && !isSearching && !isSelected ? 'bg-gray-100' : ''}`}
+                className={`border-b border-zinc-800/60 transition-colors ${
+                  isSearching || isSelected
+                    ? 'bg-zinc-800/50 border-l-2 border-l-amber-400'
+                    : 'border-l-2 border-l-transparent hover:bg-zinc-900'
+                } ${isSeparator && !isSearching && !isSelected ? 'bg-zinc-900/80' : ''}`}
               >
                 {/* Main row */}
                 <div
@@ -640,14 +638,14 @@ export default function SetlistReviewPage() {
                     }
                   }}
                 >
-                  <span className="text-gray-300 text-base flex-shrink-0 cursor-grab">⠿</span>
-                  <span className="text-gray-400 text-xs w-5 flex-shrink-0 text-right">{index + 1}</span>
+                  <span className="text-zinc-600 text-base flex-shrink-0 cursor-grab">⠿</span>
+                  <span className="text-zinc-500 text-xs w-5 flex-shrink-0 text-right tabular-nums">{index + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm truncate font-medium ${isSeparator ? 'text-gray-500 italic' : ''}`}>
+                    <p className={`text-sm truncate font-medium ${isSeparator ? 'text-zinc-400 italic' : 'text-zinc-100'}`}>
                       {item.requested_title}
                     </p>
                     {item.matched_display_title && item.matched_display_title !== item.requested_title && (
-                      <p className="text-xs text-gray-400 truncate">→ {item.matched_display_title}</p>
+                      <p className="text-xs text-zinc-500 truncate">→ {item.matched_display_title}</p>
                     )}
                   </div>
                   {/* Clickable status badge */}
@@ -661,16 +659,16 @@ export default function SetlistReviewPage() {
                         <StatusBadge status={item.match_status} />
                       </button>
                       {isStatusPickerOpen && (
-                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl z-40 py-1 min-w-[140px]">
+                        <div className="absolute right-0 top-full mt-1 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl shadow-black/50 z-40 py-1 min-w-[150px]">
                           {[
-                            { status: 'matched', label: '✓ Confirmed', color: 'text-green-700 hover:bg-green-50' },
-                            { status: 'needs_review', label: '⚠ Needs Review', color: 'text-yellow-700 hover:bg-yellow-50' },
-                            { status: 'missing', label: '✕ No Match', color: 'text-red-600 hover:bg-red-50' },
+                            { status: 'matched', label: '✓ Confirmed', color: 'text-emerald-300 hover:bg-emerald-400/10' },
+                            { status: 'needs_review', label: '⚠ Needs Review', color: 'text-amber-300 hover:bg-amber-400/10' },
+                            { status: 'missing', label: '✕ No Match', color: 'text-red-300 hover:bg-red-400/10' },
                           ].map(opt => (
                             <button
                               key={opt.status}
                               onClick={() => handleUpdateItem(item.id, item.matched_score_id, opt.status)}
-                              className={`block w-full text-left px-3 py-1.5 text-xs font-medium bg-transparent border-0 ${opt.color} ${item.match_status === opt.status ? 'font-bold' : ''}`}
+                              className={`block w-full text-left px-3 py-1.5 text-xs font-medium bg-transparent border-0 rounded-none ${opt.color} ${item.match_status === opt.status ? 'font-bold' : ''}`}
                             >
                               {opt.label}
                             </button>
@@ -687,7 +685,7 @@ export default function SetlistReviewPage() {
                     <button
                       onClick={() => { setSelectedItem(item); setStatusPickerFor(null); if (isSearching) setPreviewScore(null); }}
                       title="Show this song's chart in the right panel"
-                      className={`text-xs px-2 py-0.5 rounded ${isSelected && !previewScore ? 'text-blue-700 bg-blue-100' : 'text-indigo-600 hover:text-indigo-800 bg-transparent'}`}
+                      className={`text-[11px] px-2 py-1 rounded ${isSelected && !previewScore ? 'text-amber-300 bg-amber-400/10' : 'text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 bg-transparent'}`}
                     >
                       {isSelected && !previewScore ? '▶ Viewing' : 'View'}
                     </button>
@@ -695,14 +693,14 @@ export default function SetlistReviewPage() {
                   <button
                     onClick={() => isSearching ? closeInlineSearch() : openInlineSearch(item)}
                     title={isSearching ? 'Close search panel' : 'Search your library to manually pick which score this song maps to'}
-                    className={`text-xs px-2 py-0.5 rounded ${isSearching ? 'bg-blue-600 text-white' : 'text-blue-600 hover:text-blue-800 bg-transparent'}`}
+                    className={`text-[11px] px-2 py-1 rounded ${isSearching ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 bg-transparent'}`}
                   >
                     {isSearching ? '✕ Close' : 'Search'}
                   </button>
                   <button
                     onClick={() => handleUpdateItem(item.id, null, 'placeholder')}
                     title="Convert to a section separator — appears as a divider in forScore"
-                    className="text-purple-600 hover:text-purple-800 bg-transparent text-xs px-2 py-0.5"
+                    className="text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 bg-transparent text-[11px] px-2 py-1 rounded"
                   >
                     Sep.
                   </button>
@@ -710,7 +708,7 @@ export default function SetlistReviewPage() {
                     <button
                       onClick={() => createAlias(item.requested_title, item.matched_score_id!)}
                       title={`Save "${item.requested_title}" as an alias — future setlists will match it automatically`}
-                      className="text-green-600 hover:text-green-800 bg-transparent text-xs px-2 py-0.5"
+                      className="text-zinc-500 hover:text-emerald-300 hover:bg-emerald-400/10 bg-transparent text-[11px] px-2 py-1 rounded"
                     >
                       Alias
                     </button>
@@ -718,7 +716,7 @@ export default function SetlistReviewPage() {
                   <button
                     onClick={() => handleRemoveItem(item.id)}
                     title="Remove this song from the setlist"
-                    className="text-red-400 hover:text-red-600 bg-transparent text-xs px-2 py-0.5 ml-auto"
+                    className="text-zinc-600 hover:text-red-400 hover:bg-red-400/10 bg-transparent text-[11px] px-2 py-1 rounded ml-auto"
                   >
                     ✕
                   </button>
@@ -726,14 +724,14 @@ export default function SetlistReviewPage() {
 
                 {/* ── Inline search panel — appears below this item row ── */}
                 {isSearching && (
-                  <div className="mx-2 mb-2 rounded-lg border border-blue-300 bg-white shadow-lg overflow-hidden">
-                    <div className="flex items-center gap-2 px-3 pt-2 pb-1.5 bg-blue-600">
-                      <span className="text-xs font-semibold text-white flex-1">
-                        Find a match for: <span className="font-bold">{item.requested_title}</span>
+                  <div className="mx-2 mb-2 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/40 overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-zinc-800/80 border-b border-zinc-700/60">
+                      <span className="text-xs text-zinc-400 flex-1">
+                        Find a match for: <span className="font-semibold text-amber-300">{item.requested_title}</span>
                       </span>
                       <button
                         onClick={closeInlineSearch}
-                        className="text-blue-200 hover:text-white bg-transparent border-0 p-0 text-sm leading-none"
+                        className="text-zinc-500 hover:text-zinc-100 bg-transparent border-0 p-0 text-sm leading-none"
                       >✕</button>
                     </div>
                     <div className="px-2 py-2">
@@ -747,37 +745,37 @@ export default function SetlistReviewPage() {
                         className="w-full text-sm"
                       />
                     </div>
-                    <div className="max-h-56 overflow-y-auto border-t border-blue-100">
+                    <div className="max-h-56 overflow-y-auto border-t border-zinc-800">
                       {itemResults.length === 0 && itemQuery.length > 0 && (
-                        <p className="text-xs text-gray-400 px-3 py-2.5">No matches found for &ldquo;{itemQuery}&rdquo;</p>
+                        <p className="text-xs text-zinc-500 px-3 py-2.5">No matches found for &ldquo;{itemQuery}&rdquo;</p>
                       )}
                       {itemResults.length === 0 && itemQuery.length === 0 && (
-                        <p className="text-xs text-gray-400 px-3 py-2.5">Start typing to search your library…</p>
+                        <p className="text-xs text-zinc-500 px-3 py-2.5">Start typing to search your library…</p>
                       )}
                       {itemResults.map(score => {
                         const isPreviewing = previewScore?.forscore_path === score.forscore_path;
                         return (
                           <div
                             key={score.id}
-                            className={`flex items-stretch border-b border-gray-100 last:border-b-0 ${isPreviewing ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                            className={`flex items-stretch border-b border-zinc-800/60 last:border-b-0 ${isPreviewing ? 'bg-zinc-800/70' : 'hover:bg-zinc-800/50'}`}
                           >
                             {/* Click row to preview PDF */}
                             <button
                               onClick={() => setPreviewScore(score)}
-                              className="flex-1 text-left px-3 py-2 bg-transparent border-0"
+                              className="flex-1 text-left px-3 py-2 bg-transparent border-0 rounded-none"
                               title="Preview this score's PDF in the right panel"
                             >
                               <div className="flex items-center gap-1.5">
-                                <span className="font-medium text-sm truncate flex-1">{score.display_title}</span>
-                                {score.detected_key && <span className="text-xs bg-amber-100 text-amber-700 px-1 py-0.5 rounded flex-shrink-0">{score.detected_key}</span>}
-                                {score.version_label && <span className="text-xs bg-blue-100 text-blue-700 px-1 py-0.5 rounded flex-shrink-0">{score.version_label}</span>}
-                                {isPreviewing && <span className="text-xs text-blue-500 ml-1 flex-shrink-0">▶</span>}
+                                <span className="font-medium text-sm truncate flex-1 text-zinc-100">{score.display_title}</span>
+                                {score.detected_key && <span className="chip-key">{score.detected_key}</span>}
+                                {score.version_label && <span className="chip-inst">{score.version_label}</span>}
+                                {isPreviewing && <span className="text-xs text-amber-300 ml-1 flex-shrink-0">▶</span>}
                               </div>
                             </button>
                             {/* Assign button */}
                             <button
                               onClick={() => handleAssignScore(item.id, score)}
-                              className="flex-shrink-0 px-3 border-l border-gray-200 bg-transparent hover:bg-green-600 text-green-700 hover:text-white text-xs font-semibold transition-colors whitespace-nowrap"
+                              className="flex-shrink-0 px-3 border-l border-zinc-800 bg-transparent hover:bg-emerald-500 text-emerald-300 hover:text-zinc-950 text-xs font-semibold transition-colors whitespace-nowrap rounded-none"
                               title="Assign this score to the song"
                             >
                               Assign ✓
@@ -799,56 +797,52 @@ export default function SetlistReviewPage() {
 
         {/* Preview banner — shown when browsing search results */}
         {previewScore && (
-          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-xs">
+          <div className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 bg-amber-400/10 border-b border-amber-400/20 text-amber-200 text-xs">
             <span className="font-semibold truncate flex-1">Previewing: {previewScore.display_title}</span>
             {searchingFor
-              ? <span className="text-blue-200">Click &ldquo;Assign ✓&rdquo; to use this score</span>
-              : <span className="text-blue-200">Click &ldquo;+ Add&rdquo; to add to setlist</span>
+              ? <span className="text-amber-300/60">Click &ldquo;Assign ✓&rdquo; to use this score</span>
+              : <span className="text-amber-300/60">Click &ldquo;+ Add&rdquo; to add to setlist</span>
             }
           </div>
         )}
 
         {/* Header strip: song title + key/instrument badges + Edit toggle */}
         {selectedItem && !previewScore && (
-          <div className="flex-shrink-0 border-b bg-gray-50">
+          <div className="flex-shrink-0 border-b border-zinc-800 bg-zinc-900">
             {/* Top row */}
             <div className="flex items-center gap-2 px-3 py-2">
               <div className="flex-1 min-w-0">
                 {/* Song name with ✎ shortcut to edit display title */}
                 <div className="flex items-center gap-1 group/title">
-                  <p className="font-semibold text-sm truncate">{selectedItem.requested_title}</p>
+                  <p className="font-semibold text-sm truncate text-zinc-100">{selectedItem.requested_title}</p>
                   {selectedScore && (
                     <button
                       onClick={handleEditTitle}
                       title="Edit this score's display title"
-                      className="text-gray-300 hover:text-blue-500 opacity-0 group-hover/title:opacity-100 text-xs bg-transparent border-0 p-0 flex-shrink-0"
+                      className="text-zinc-600 hover:text-amber-300 opacity-0 group-hover/title:opacity-100 text-xs bg-transparent border-0 p-0 flex-shrink-0"
                     >✎</button>
                   )}
                 </div>
                 {/* File title (if different) with its own ✎ */}
                 {selectedItem.matched_display_title && selectedItem.matched_display_title !== selectedItem.requested_title && (
                   <div className="flex items-center gap-1 group/filetitle">
-                    <p className="text-xs text-gray-400 truncate">→ {selectedItem.matched_display_title}</p>
+                    <p className="text-xs text-zinc-500 truncate">→ {selectedItem.matched_display_title}</p>
                     {selectedScore && (
                       <button
                         onClick={handleEditTitle}
                         title="Edit the file's display title"
-                        className="text-gray-300 hover:text-blue-500 opacity-0 group-hover/filetitle:opacity-100 text-xs bg-transparent border-0 p-0 flex-shrink-0"
+                        className="text-zinc-600 hover:text-amber-300 opacity-0 group-hover/filetitle:opacity-100 text-xs bg-transparent border-0 p-0 flex-shrink-0"
                       >✎</button>
                     )}
                   </div>
                 )}
               </div>
-              {selectedScore?.detected_key && (
-                <span className="flex-shrink-0 bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-semibold">{selectedScore.detected_key}</span>
-              )}
-              {selectedScore?.version_label && (
-                <span className="flex-shrink-0 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">{selectedScore.version_label}</span>
-              )}
+              {selectedScore?.detected_key && <span className="chip-key">{selectedScore.detected_key}</span>}
+              {selectedScore?.version_label && <span className="chip-inst">{selectedScore.version_label}</span>}
               <button
                 onClick={() => { setShowScoreEdit(v => !v); setScoreSaved(false); }}
                 title="Edit this score's key, instrument, and status"
-                className={`flex-shrink-0 text-xs px-2.5 py-1 rounded ${showScoreEdit ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                className={`flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg ${showScoreEdit ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
               >
                 Edit
               </button>
@@ -856,10 +850,10 @@ export default function SetlistReviewPage() {
 
             {/* Edit form — identical layout to Library page */}
             {showScoreEdit && selectedScore && (
-              <div className="border-t bg-gray-50 p-3">
+              <div className="border-t border-zinc-800 bg-zinc-900 p-3">
                 <div className="grid grid-cols-3 gap-2 mb-2">
                   <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">Display Title</label>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Display Title</label>
                     <input
                       ref={displayTitleRef}
                       type="text"
@@ -869,7 +863,7 @@ export default function SetlistReviewPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">Status</label>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Status</label>
                     <select value={scoreEdit.status} onChange={e => setScoreEdit(f => ({ ...f, status: e.target.value }))} className="w-full text-sm">
                       <option value="new">New</option>
                       <option value="reviewed">Reviewed</option>
@@ -879,13 +873,13 @@ export default function SetlistReviewPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">Key</label>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Key</label>
                     <select value={scoreEdit.detected_key} onChange={e => setScoreEdit(f => ({ ...f, detected_key: e.target.value }))} className="w-full text-sm">
                       {KEYS.map(k => <option key={k} value={k}>{k || '— not set —'}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-0.5">Instrument</label>
+                    <label className="block text-xs font-medium text-zinc-400 mb-1">Instrument</label>
                     <select value={scoreEdit.version_label} onChange={e => setScoreEdit(f => ({ ...f, version_label: e.target.value }))} className="w-full text-sm">
                       {INSTRUMENTS.map(i => <option key={i} value={i === 'Generic' ? '' : i}>{i}</option>)}
                     </select>
@@ -893,8 +887,8 @@ export default function SetlistReviewPage() {
                 </div>
 
                 {/* Notes — full-width, separate from the metadata grid */}
-                <div className="border-t border-gray-200 pt-2 mt-1 mb-2">
-                  <label className="block text-xs font-medium text-gray-500 mb-0.5">Notes / Comments</label>
+                <div className="border-t border-zinc-800 pt-2 mt-1 mb-2.5">
+                  <label className="block text-xs font-medium text-zinc-500 mb-1">Notes / Comments</label>
                   <textarea
                     value={scoreEdit.notes}
                     onChange={e => setScoreEdit(f => ({ ...f, notes: e.target.value }))}
@@ -906,19 +900,19 @@ export default function SetlistReviewPage() {
 
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
-                    onClick={handleScoreSave}
-                    title="Save key, title, notes to this app only (forScore will not be affected)"
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-1.5"
-                  >Save to app</button>
-                  <button
                     onClick={handleScoreSaveAndPdf}
                     disabled={pdfSaving}
                     title="Save to app AND write title + key into the PDF file — forScore will pick these up automatically"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 text-sm px-4 py-1.5"
+                    className="btn-primary disabled:opacity-50 text-sm px-4 py-1.5"
                   >{pdfSaving ? 'Updating PDF…' : 'Save + update PDF'}</button>
-                  <button onClick={() => setAliasModal(selectedScore)} title="Add an alternate name for this score — useful when a setlist uses a different title" className="bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm px-3 py-1.5">+ Alias</button>
-                  {scoreSaved && !pdfSaved && <span className="text-green-600 text-sm">Saved ✓</span>}
-                  {pdfSaved && <span className="text-indigo-600 text-sm font-medium">Saved + PDF updated ✓</span>}
+                  <button
+                    onClick={handleScoreSave}
+                    title="Save key, title, notes to this app only (forScore will not be affected)"
+                    className="btn-secondary text-sm px-4 py-1.5"
+                  >Save to app</button>
+                  <button onClick={() => setAliasModal(selectedScore)} title="Add an alternate name for this score — useful when a setlist uses a different title" className="btn-ghost text-sm px-3 py-1.5">+ Alias</button>
+                  {scoreSaved && !pdfSaved && <span className="text-emerald-400 text-sm">Saved ✓</span>}
+                  {pdfSaved && <span className="text-amber-300 text-sm font-medium">Saved + PDF updated ✓</span>}
                 </div>
               </div>
             )}
@@ -929,10 +923,14 @@ export default function SetlistReviewPage() {
           <InlinePdfViewer
             filename={previewScore?.forscore_path ?? selectedItem?.matched_forscore_path ?? null}
             placeholder={
-              <div className="text-center text-gray-500">
-                <p className="text-5xl mb-4">🎼</p>
-                <p className="text-sm font-medium">Tap a matched song</p>
-                <p className="text-xs mt-1 text-gray-600">The chart will appear here</p>
+              <div className="text-center text-zinc-500">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-zinc-700">
+                  <path d="M9 18V5l12-2v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="16" r="3" />
+                </svg>
+                <p className="text-sm font-medium text-zinc-400">Tap a matched song</p>
+                <p className="text-xs mt-1 text-zinc-600">The chart will appear here</p>
               </div>
             }
           />
@@ -943,15 +941,15 @@ export default function SetlistReviewPage() {
     {/* ── Alias modal — identical to Library page ──────────────────────── */}
     {aliasModal && (
       <div
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+        className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
         onClick={() => setAliasModal(null)}
       >
         <div
-          className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+          className="bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl p-6 w-full max-w-md"
           onClick={e => e.stopPropagation()}
         >
-          <h2 className="text-lg font-bold mb-2">Add Alias</h2>
-          <p className="text-sm text-gray-500 mb-3">For: <strong>{aliasModal.display_title}</strong></p>
+          <h2 className="text-lg font-bold mb-2 text-zinc-100">Add Alias</h2>
+          <p className="text-sm text-zinc-400 mb-3">For: <strong className="text-zinc-200">{aliasModal.display_title}</strong></p>
           <input
             type="text"
             placeholder="Alias text"
@@ -962,8 +960,8 @@ export default function SetlistReviewPage() {
             autoFocus
           />
           <div className="flex justify-end gap-2">
-            <button onClick={() => setAliasModal(null)} className="bg-gray-100 hover:bg-gray-200 text-gray-700">Cancel</button>
-            <button onClick={handleAddAlias} className="bg-green-600 hover:bg-green-700 text-white">Add Alias</button>
+            <button onClick={() => setAliasModal(null)} className="btn-ghost">Cancel</button>
+            <button onClick={handleAddAlias} className="btn-primary">Add Alias</button>
           </div>
         </div>
       </div>

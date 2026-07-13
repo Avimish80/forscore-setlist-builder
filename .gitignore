@@ -10,3 +10,7 @@ next-env.d.ts
 *.4sb
 *.4ss
 .vercel
+
+# Unrelated local projects kept out of this repo
+Anagram Editor/
+SESSION-mobile-responsive.md

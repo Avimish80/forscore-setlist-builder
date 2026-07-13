@@ -29,44 +29,51 @@ export default function SetlistsPage() {
 
   return (
     <div className="p-6 h-full overflow-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Saved Setlists</h1>
-        <Link href="/setlist/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
-          New Setlist
-        </Link>
-      </div>
+      <div className="max-w-3xl">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">Setlists</h1>
+          <Link href="/setlist/new" className="btn-primary px-4 py-2 rounded-lg text-sm inline-flex items-center gap-1.5">
+            <span className="text-base leading-none">＋</span> New Setlist
+          </Link>
+        </div>
 
-      {loading ? (
-        <p className="text-gray-500">Loading...</p>
-      ) : setlists.length === 0 ? (
-        <p className="text-gray-500 text-sm py-8 text-center">No setlists yet.</p>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        {loading ? (
+          <p className="text-zinc-500">Loading...</p>
+        ) : setlists.length === 0 ? (
+          <div className="panel py-16 text-center">
+            <p className="text-zinc-300 font-medium mb-1">No setlists yet</p>
+            <p className="text-zinc-500 text-sm">Create one and paste in your song list.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
             {setlists.map(sl => (
-              <tr key={sl.id} className="hover:bg-gray-50">
-                <td>
-                  <Link href={`/setlist/${sl.id}`} className="text-blue-600 hover:underline font-medium">{sl.name}</Link>
-                </td>
-                <td className="text-sm text-gray-500">{new Date(sl.created_at).toLocaleDateString('en-GB')}</td>
-                <td>
-                  <div className="flex gap-2">
-                    <Link href={`/setlist/${sl.id}`} title="Open this setlist to view, edit, and export it" className="text-blue-600 hover:text-blue-800 text-xs">Review</Link>
-                    <button onClick={() => handleDelete(sl.id)} title="Permanently delete this setlist" className="text-red-600 hover:text-red-800 bg-transparent px-2 py-1 text-xs">Delete</button>
-                  </div>
-                </td>
-              </tr>
+              <div
+                key={sl.id}
+                className="group flex items-center gap-4 px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-zinc-700 hover:bg-zinc-800/60 transition-colors"
+              >
+                <Link href={`/setlist/${sl.id}`} className="flex-1 min-w-0">
+                  <p className="font-medium text-zinc-100 truncate group-hover:text-amber-300 transition-colors">{sl.name}</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">{new Date(sl.created_at).toLocaleDateString('en-GB')}</p>
+                </Link>
+                <Link
+                  href={`/setlist/${sl.id}`}
+                  title="Open this setlist to view, edit, and export it"
+                  className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex-shrink-0"
+                >
+                  Open
+                </Link>
+                <button
+                  onClick={() => handleDelete(sl.id)}
+                  title="Permanently delete this setlist"
+                  className="btn-ghost hover:text-red-400 text-xs px-2 py-1.5 flex-shrink-0"
+                >
+                  Delete
+                </button>
+              </div>
             ))}
-          </tbody>
-        </table>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
