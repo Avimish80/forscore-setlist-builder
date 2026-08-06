@@ -33,6 +33,8 @@ export interface Setlist {
   id: number;
   name: string;
   source_text: string | null;
+  /** JSON array of instrument names this setlist has views for. */
+  instruments: string | null;
   created_at: string;
   updated_at: string;
   items?: SetlistItem[];

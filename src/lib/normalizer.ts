@@ -5,11 +5,7 @@ const KNOWN_KEYS = [
   'Ebm', 'Em', 'Fm', 'F#m', 'Gbm', 'Gm', 'G#m',
 ];
 
-const VERSION_LABELS = [
-  'Piano', 'Full Score', 'Lead Sheet', 'Vocal', 'Guitar',
-  'Bass', 'Drums', 'Strings', 'Horns', 'Saxophone', 'Trumpet',
-  'Singer', 'Solo', 'Duo', 'Trio', 'Quartet', 'Band',
-];
+import { detectInstrument } from './instruments';
 
 export function normalize(text: string): string {
   return text
@@ -39,14 +35,12 @@ export function detectKey(filename: string): string | null {
   return null;
 }
 
+/**
+ * The instrument a file is written for. Delegates to the shared instrument
+ * vocabulary so imports, matching, and instrument views all agree.
+ */
 export function detectVersionLabel(filename: string): string | null {
-  const name = filename.replace(/\.pdf$/i, '');
-  for (const label of VERSION_LABELS) {
-    if (name.toLowerCase().includes(label.toLowerCase())) {
-      return label;
-    }
-  }
-  return null;
+  return detectInstrument(filename).instrument;
 }
 
 export function guessCleanTitle(filename: string): string {

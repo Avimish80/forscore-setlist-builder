@@ -10,7 +10,11 @@ import {
   reorderSetlistItems, addSetlistItem, addSeparatorItem, rematchSetlist,
   exportSetlistXml, searchScores, createAlias, renameSetlist,
   getScore, updateScore,
+  getSetlistInstruments, setSetlistInstruments,
+  setPartOverride, clearPartOverride, exportInstrumentSetlistXml,
 } from '@/lib/data';
+import { getInstrumentView, getVariationsForItem, ResolvedPart } from '@/lib/parts';
+import { INSTRUMENTS as ALL_INSTRUMENTS } from '@/lib/instruments';
 import { writeMetadataToPdf } from '@/lib/pdf-metadata';
 
 const KEYS = [
@@ -18,11 +22,8 @@ const KEYS = [
   'Cm', 'C#m', 'Dm', 'D#m', 'Ebm', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Abm', 'Am', 'A#m', 'Bbm', 'Bm',
 ];
 
-const INSTRUMENTS = [
-  'Generic', 'Lead Sheet', 'Piano', 'Piano/Vocal', 'Guitar', 'Bass',
-  'Violin', 'Viola', 'Cello', 'Drums', 'Saxophone', 'Alto Sax', 'Tenor Sax',
-  'Trumpet', 'Trombone', 'Flute', 'Clarinet', 'Horns', 'Strings', 'Full Score', 'Other',
-];
+// 'Generic' is the UI name for an empty instrument label — a score any player reads.
+const INSTRUMENTS = ['Generic', ...ALL_INSTRUMENTS];
 
 interface ItemRow {
   id: number;
@@ -101,6 +102,15 @@ export default function SetlistReviewPage() {
   const [aliasModal, setAliasModal] = useState<Score | null>(null);
   const [aliasText, setAliasText] = useState('');
 
+  // ── Instrument views ──
+  // activeView is null for the main setlist, or an instrument name for a view.
+  const [instruments, setInstruments] = useState<string[]>([]);
+  const [activeView, setActiveView] = useState<string | null>(null);
+  const [viewParts, setViewParts] = useState<ResolvedPart[]>([]);
+  const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
+  const [overrideFor, setOverrideFor] = useState<number | null>(null);
+  const [overrideChoices, setOverrideChoices] = useState<Score[]>([]);
+
   const touchDragIndex = useRef<number | null>(null);
   const isDragging = useRef(false);
   const itemsRef = useRef<ItemRow[]>([]);
@@ -125,6 +135,60 @@ export default function SetlistReviewPage() {
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Instrument views derive from the main setlist, so recompute whenever the
+  // setlist changes — that is what keeps every view in step automatically.
+  const refreshView = useCallback(() => {
+    if (!activeView) { setViewParts([]); return; }
+    setViewParts(getInstrumentView(id, activeView));
+  }, [id, activeView]);
+
+  useEffect(() => { setInstruments(getSetlistInstruments(id)); }, [id]);
+  useEffect(() => { refreshView(); }, [refreshView, items]);
+
+  function toggleInstrument(name: string) {
+    const next = instruments.includes(name)
+      ? instruments.filter(i => i !== name)
+      : [...instruments, name];
+    setInstruments(next);
+    setSetlistInstruments(id, next);
+    if (activeView === name && !next.includes(name)) setActiveView(null);
+  }
+
+  function openOverridePicker(itemId: number) {
+    setOverrideChoices(getVariationsForItem(itemId));
+    setOverrideFor(overrideFor === itemId ? null : itemId);
+  }
+
+  function chooseOverride(itemId: number, scoreId: number) {
+    if (!activeView) return;
+    setPartOverride(itemId, activeView, scoreId);
+    setOverrideFor(null);
+    refreshView();
+  }
+
+  function resetOverride(itemId: number) {
+    if (!activeView) return;
+    clearPartOverride(itemId, activeView);
+    setOverrideFor(null);
+    refreshView();
+  }
+
+  async function handleExportView() {
+    const result = activeView
+      ? exportInstrumentSetlistXml(id, activeView)
+      : exportSetlistXml(id);
+    if (!result) return;
+    const filename = `${result.name.replace(/[^a-zA-Z0-9\s-]/g, '')}.4ss`;
+    const file = new File([result.xml], filename, { type: 'application/xml' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: result.name }); return; } catch (_) {}
+    }
+    const url = URL.createObjectURL(new Blob([result.xml], { type: 'application/xml' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   // Load full score details whenever selected item changes
   useEffect(() => {
@@ -499,17 +563,74 @@ export default function SetlistReviewPage() {
           </div>
           <p className="text-xs text-zinc-500 mb-2.5 tabular-nums">{matched}/{items.length} matched</p>
 
+          {/* Instrument view tabs — Main plus one per chosen instrument */}
+          <div className="flex items-center gap-1 flex-wrap mb-2">
+            <button
+              onClick={() => { setActiveView(null); setOverrideFor(null); }}
+              title="The main setlist — add, remove, and reorder songs here"
+              className={`text-xs px-2.5 py-1 rounded-md ${activeView === null ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 bg-transparent'}`}
+            >
+              Main
+            </button>
+            {instruments.map(name => (
+              <button
+                key={name}
+                onClick={() => { setActiveView(name); setOverrideFor(null); }}
+                title={`${name} view — each song resolved to the ${name} score`}
+                className={`text-xs px-2.5 py-1 rounded-md ${activeView === name ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 bg-transparent'}`}
+              >
+                {name}
+              </button>
+            ))}
+            <div className="relative">
+              <button
+                onClick={() => setShowInstrumentPicker(v => !v)}
+                title="Choose which instrument views this setlist should have"
+                className="text-xs px-2 py-1 rounded-md text-zinc-500 hover:bg-zinc-800 hover:text-zinc-100 bg-transparent"
+              >
+                ＋ Instruments
+              </button>
+              {showInstrumentPicker && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setShowInstrumentPicker(false)} />
+                  <div className="absolute left-0 top-full mt-1.5 w-56 max-h-72 overflow-y-auto bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 z-40 py-1">
+                    {ALL_INSTRUMENTS.map(name => (
+                      <button
+                        key={name}
+                        onClick={() => toggleInstrument(name)}
+                        className="w-full text-left px-3 py-1.5 text-xs bg-transparent border-0 rounded-none flex items-center gap-2 text-zinc-200 hover:bg-zinc-800"
+                      >
+                        <span className={`w-3.5 flex-shrink-0 ${instruments.includes(name) ? 'text-amber-300' : 'text-transparent'}`}>✓</span>
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Action buttons */}
           <div className="flex gap-1.5 flex-wrap">
-            <button onClick={handleSendToForScore} title="Export and share the .4ss setlist file — opens directly in forScore" className="btn-primary text-xs px-3 py-1.5 rounded-md">Save Set List</button>
-            <button onClick={() => { rematchSetlist(id); load(); }} title="Re-run automatic matching for all songs against your library" className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Re-match</button>
-            <button onClick={enterEditMode} title="Drag and drop to change the song order." className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Edit Order</button>
+            <button onClick={handleExportView} title={activeView ? `Export the ${activeView} view as its own .4ss file for forScore` : 'Export and share the .4ss setlist file — opens directly in forScore'} className="btn-primary text-xs px-3 py-1.5 rounded-md">
+              {activeView ? `Save ${activeView}` : 'Save Set List'}
+            </button>
+            {/* Songs are added, reordered, and re-matched on the main setlist;
+                instrument views follow it automatically. */}
+            {!activeView && (
+              <>
+                <button onClick={() => { rematchSetlist(id); load(); }} title="Re-run automatic matching for all songs against your library" className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Re-match</button>
+                <button onClick={enterEditMode} title="Drag and drop to change the song order." className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Edit Order</button>
+              </>
+            )}
             <button onClick={handlePrint} title="Open a print-friendly version of this setlist" className="btn-secondary text-xs px-2.5 py-1.5 rounded-md">Print</button>
-            <button
-              onClick={() => setShowSepInput(v => !v)}
-              title="Add a section separator (e.g. 'First Half', 'Dinner Break') to divide the setlist"
-              className={`text-xs px-2.5 py-1.5 rounded-md ${showSepInput ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
-            >+ Separator</button>
+            {!activeView && (
+              <button
+                onClick={() => setShowSepInput(v => !v)}
+                title="Add a section separator (e.g. 'First Half', 'Dinner Break') to divide the setlist"
+                className={`text-xs px-2.5 py-1.5 rounded-md ${showSepInput ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
+              >+ Separator</button>
+            )}
           </div>
 
           {/* Separator name input */}
@@ -532,25 +653,32 @@ export default function SetlistReviewPage() {
             </div>
           )}
 
-          {/* ── Add song search box (add-only) ── */}
-          <div className="mt-2.5">
-            <input
-              ref={addRef}
-              type="text"
-              placeholder="Add a song — search library or type a name…"
-              value={addQuery}
-              onChange={e => setAddQuery(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && addQuery.trim()) handleAddByName();
-                if (e.key === 'Escape') { setAddQuery(''); setAddResults([]); setPreviewScore(null); }
-              }}
-              className="w-full text-sm"
-            />
-          </div>
+          {/* ── Add song search box (add-only, main setlist) ── */}
+          {!activeView && (
+            <div className="mt-2.5">
+              <input
+                ref={addRef}
+                type="text"
+                placeholder="Add a song — search library or type a name…"
+                value={addQuery}
+                onChange={e => setAddQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && addQuery.trim()) handleAddByName();
+                  if (e.key === 'Escape') { setAddQuery(''); setAddResults([]); setPreviewScore(null); }
+                }}
+                className="w-full text-sm"
+              />
+            </div>
+          )}
+          {activeView && (
+            <p className="mt-2 text-[11px] text-zinc-500">
+              Follows the main setlist. Songs are added and reordered on the Main tab.
+            </p>
+          )}
         </div>
 
         {/* ── Add-song search results — clearly separated "add" zone ── */}
-        {addQuery.length >= 1 && (
+        {!activeView && addQuery.length >= 1 && (
           <div className="flex-shrink-0 border-b border-zinc-800 bg-zinc-900 overflow-y-auto" style={{ maxHeight: '40%' }}>
             <div className="px-3 pt-2 pb-1">
               <span className="text-[10px] font-semibold text-amber-300/90 uppercase tracking-widest">Add to setlist</span>
@@ -608,7 +736,138 @@ export default function SetlistReviewPage() {
           </div>
         )}
 
+        {/* ── Instrument view list — resolved score per song, read-only structure ── */}
+        {activeView && (
+          <div className="flex-1 overflow-y-auto">
+            {viewParts.map((part, index) => {
+              const isSelected = selectedItem?.id === part.item_id;
+              const isPicking = overrideFor === part.item_id;
+
+              if (part.is_separator) {
+                return (
+                  <div key={part.item_id} className="px-3 py-1.5 bg-zinc-900/80 border-b border-zinc-800/60">
+                    <p className="text-xs text-zinc-400 italic truncate">{part.requested_title}</p>
+                  </div>
+                );
+              }
+
+              const badge = {
+                manual:   'bg-sky-400/10 text-sky-300 ring-sky-400/25',
+                exact:    'bg-emerald-400/10 text-emerald-300 ring-emerald-400/25',
+                family:   'bg-violet-400/10 text-violet-300 ring-violet-400/25',
+                generic:  'bg-zinc-400/10 text-zinc-400 ring-zinc-400/20',
+                fallback: 'bg-amber-400/10 text-amber-300 ring-amber-400/25',
+                missing:  'bg-red-400/10 text-red-300 ring-red-400/25',
+              }[part.source];
+
+              const label = {
+                manual: 'Chosen', exact: activeView, family: 'Section',
+                generic: 'Shared', fallback: 'Readable', missing: 'Missing',
+              }[part.source];
+
+              return (
+                <div
+                  key={part.item_id}
+                  className={`border-b border-zinc-800/60 transition-colors ${
+                    isSelected ? 'bg-zinc-800/50 border-l-2 border-l-amber-400' : 'border-l-2 border-l-transparent hover:bg-zinc-900'
+                  }`}
+                >
+                  <div
+                    className="flex items-center gap-2 px-2 py-2 cursor-pointer"
+                    onClick={() => {
+                      if (!part.forscore_path) return;
+                      // Show this instrument's chart, not the main setlist's.
+                      setPreviewScore({
+                        id: part.score_id, display_title: part.display_title,
+                        forscore_path: part.forscore_path, detected_key: part.detected_key,
+                        version_label: part.version_label,
+                      } as Score);
+                      setSelectedItem(items.find(i => i.id === part.item_id) ?? null);
+                      setMobilePane('pdf');
+                    }}
+                  >
+                    <span className="text-zinc-500 text-xs w-5 flex-shrink-0 text-right tabular-nums">{index + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm truncate font-medium text-zinc-100">{part.requested_title}</p>
+                      <p className="text-xs text-zinc-500 truncate">
+                        {part.display_title ? `→ ${part.display_title}` : part.reason}
+                      </p>
+                    </div>
+                    <span
+                      title={part.reason}
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ring-inset flex-shrink-0 ${badge}`}
+                    >
+                      {label}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-0.5 px-2 pb-1.5">
+                    <button
+                      onClick={() => openOverridePicker(part.item_id)}
+                      title={`Pick which score the ${activeView} player gets for this song`}
+                      className={`text-[11px] px-2 py-1 rounded ${isPicking ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 bg-transparent'}`}
+                    >
+                      {isPicking ? '✕ Close' : 'Choose…'}
+                    </button>
+                    {part.source === 'manual' && (
+                      <button
+                        onClick={() => resetOverride(part.item_id)}
+                        title="Go back to automatic detection for this song"
+                        className="text-[11px] px-2 py-1 rounded text-zinc-500 hover:text-amber-300 hover:bg-zinc-800 bg-transparent"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Override picker — this song's variations first */}
+                  {isPicking && (
+                    <div className="mx-2 mb-2 rounded-xl border border-zinc-700 bg-zinc-900 shadow-2xl shadow-black/40 overflow-hidden">
+                      <div className="px-3 py-2 bg-zinc-800/80 border-b border-zinc-700/60">
+                        <span className="text-xs text-zinc-400">
+                          {activeView} score for <span className="font-semibold text-amber-300">{part.requested_title}</span>
+                        </span>
+                      </div>
+                      <div className="max-h-56 overflow-y-auto">
+                        {overrideChoices.length === 0 && (
+                          <p className="text-xs text-zinc-500 px-3 py-2.5">No other versions of this song in your library.</p>
+                        )}
+                        {overrideChoices.map(score => (
+                          <div
+                            key={score.id}
+                            className={`flex items-stretch border-b border-zinc-800/60 last:border-b-0 ${score.id === part.score_id ? 'bg-zinc-800/70' : 'hover:bg-zinc-800/50'}`}
+                          >
+                            <button
+                              onClick={() => { setPreviewScore(score); setMobilePane('pdf'); }}
+                              className="flex-1 text-left px-3 py-2 bg-transparent border-0 rounded-none"
+                              title="Preview this score"
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-sm truncate flex-1 text-zinc-100">{score.display_title}</span>
+                                {score.detected_key && <span className="chip-key">{score.detected_key}</span>}
+                                <span className="chip-inst">{score.version_label || 'Generic'}</span>
+                              </div>
+                            </button>
+                            <button
+                              onClick={() => chooseOverride(part.item_id, score.id)}
+                              className="flex-shrink-0 px-3 border-l border-zinc-800 bg-transparent hover:bg-emerald-500 text-emerald-300 hover:text-zinc-950 text-xs font-semibold transition-colors whitespace-nowrap rounded-none"
+                              title={`Use this score for ${activeView}`}
+                            >
+                              Use ✓
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* ── Item list ── */}
+        {!activeView && (
         <div className="flex-1 overflow-y-auto">
           {items.map((item, index) => {
             const isSelected = selectedItem?.id === item.id;
@@ -795,6 +1054,7 @@ export default function SetlistReviewPage() {
             );
           })}
         </div>
+        )}
       </div>
 
       {/* ── Right: PDF viewer — full screen on phones while viewing ──────── */}

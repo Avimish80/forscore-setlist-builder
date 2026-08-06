@@ -4,7 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { importDatabaseFile, exportDatabaseFile, getDbStats, clearDatabase } from '@/lib/client-db';
 import { import4sb, ImportProgress } from '@/lib/parse-4sb';
 import { getPdfCount, clearPdfs, listPdfFilenames } from '@/lib/pdf-store';
-import { rebuildLibraryFromFilenames } from '@/lib/data';
+import {
+  rebuildLibraryFromFilenames,
+  previewInstrumentBackfill, applyInstrumentBackfill, BackfillRow,
+  previewInstrumentCorrections, applyInstrumentCorrections, CorrectionRow,
+} from '@/lib/data';
 
 export default function SettingsPage() {
   const [stats, setStats] = useState({ scores: 0, setlists: 0, aliases: 0 });
@@ -14,6 +18,11 @@ export default function SettingsPage() {
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const backupRef = useRef<HTMLInputElement>(null);
+
+  // Instrument labelling — always previewed before anything is written
+  const [fills, setFills] = useState<BackfillRow[] | null>(null);
+  const [fixes, setFixes] = useState<CorrectionRow[] | null>(null);
+  const [labelMsg, setLabelMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setStats(getDbStats());
@@ -164,6 +173,105 @@ export default function SettingsPage() {
         )}
         {backupMsg && !backupProgress && (
           <p className={`text-sm mt-3 ${backupMsg.includes('failed') ? 'text-red-400' : 'text-emerald-300'}`}>{backupMsg}</p>
+        )}
+      </div>
+
+      {/* ── Instrument labels — powers the per-instrument setlist views ── */}
+      <div className="panel p-5 mb-6">
+        <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">Instrument labels</h2>
+        <p className="text-xs text-zinc-500 mb-3">
+          Instrument views work out which score each player gets from each score&rsquo;s instrument
+          label. Scan your library to fill in labels that are missing. Nothing is changed until you
+          apply it, and labels you set by hand are never overwritten by the fill.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => { setFills(previewInstrumentBackfill()); setFixes(null); setLabelMsg(null); }}
+            title="Find unlabelled scores whose filename identifies an instrument"
+            className="btn-primary text-sm"
+          >
+            Scan for missing labels
+          </button>
+          <button
+            onClick={() => { setFixes(previewInstrumentCorrections()); setFills(null); setLabelMsg(null); }}
+            title="Find scores whose existing label disagrees with the part named in the filename"
+            className="btn-secondary text-sm"
+          >
+            Scan for wrong labels
+          </button>
+        </div>
+
+        {labelMsg && <p className="text-sm text-emerald-300 mt-3">{labelMsg}</p>}
+
+        {fills && (
+          <div className="mt-4">
+            <p className="text-sm text-zinc-300 mb-2">
+              {fills.length === 0
+                ? 'Every score that can be identified already has a label.'
+                : `${fills.length} scores can be labelled:`}
+            </p>
+            {fills.length > 0 && (
+              <>
+                <div className="max-h-52 overflow-y-auto border border-zinc-800 rounded-lg divide-y divide-zinc-800">
+                  {fills.slice(0, 300).map(r => (
+                    <div key={r.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="text-xs text-zinc-300 truncate flex-1">{r.display_title}</span>
+                      <span className="chip-inst">{r.instrument}</span>
+                    </div>
+                  ))}
+                </div>
+                {fills.length > 300 && <p className="text-xs text-zinc-500 mt-1">Showing the first 300 of {fills.length}.</p>}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => { const n = applyInstrumentBackfill(fills); setLabelMsg(`Labelled ${n} scores.`); setFills(null); }}
+                    className="btn-primary text-sm"
+                  >
+                    Apply {fills.length} labels
+                  </button>
+                  <button onClick={() => setFills(null)} className="btn-ghost text-sm">Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {fixes && (
+          <div className="mt-4">
+            <p className="text-sm text-zinc-300 mb-1">
+              {fixes.length === 0
+                ? 'No labels disagree with their filenames.'
+                : `${fixes.length} labels look wrong:`}
+            </p>
+            {fixes.length > 0 && (
+              <>
+                <p className="text-xs text-zinc-500 mb-2">
+                  These files name a part in their own right — a file called &ldquo;…STRINGS - Viola.pdf&rdquo;
+                  labelled Strings is really the viola part, and a violinist could be handed it by mistake.
+                  This one <span className="text-amber-300">does overwrite</span> existing labels.
+                </p>
+                <div className="max-h-52 overflow-y-auto border border-zinc-800 rounded-lg divide-y divide-zinc-800">
+                  {fixes.slice(0, 300).map(r => (
+                    <div key={r.id} className="flex items-center gap-2 px-3 py-1.5">
+                      <span className="text-xs text-zinc-300 truncate flex-1">{r.display_title}</span>
+                      <span className="text-[11px] text-zinc-500 line-through flex-shrink-0">{r.current}</span>
+                      <span className="text-zinc-600 text-xs">→</span>
+                      <span className="chip-inst">{r.instrument}</span>
+                    </div>
+                  ))}
+                </div>
+                {fixes.length > 300 && <p className="text-xs text-zinc-500 mt-1">Showing the first 300 of {fixes.length}.</p>}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() => { const n = applyInstrumentCorrections(fixes); setLabelMsg(`Corrected ${n} labels.`); setFixes(null); }}
+                    className="btn-primary text-sm"
+                  >
+                    Apply {fixes.length} corrections
+                  </button>
+                  <button onClick={() => setFixes(null)} className="btn-ghost text-sm">Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
 

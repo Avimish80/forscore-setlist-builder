@@ -189,12 +189,45 @@ const SCHEMA = `
     PRIMARY KEY (score_id, tag)
   );
 
+  CREATE TABLE IF NOT EXISTS setlist_item_parts (
+    setlist_item_id INTEGER NOT NULL REFERENCES setlist_items(id) ON DELETE CASCADE,
+    instrument TEXT NOT NULL,
+    score_id INTEGER REFERENCES scores(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (setlist_item_id, instrument)
+  );
+
   CREATE INDEX IF NOT EXISTS idx_scores_normalized ON scores(normalized_title);
   CREATE INDEX IF NOT EXISTS idx_scores_status ON scores(status);
   CREATE INDEX IF NOT EXISTS idx_aliases_normalized ON aliases(normalized_alias);
   CREATE INDEX IF NOT EXISTS idx_aliases_score ON aliases(score_id);
   CREATE INDEX IF NOT EXISTS idx_setlist_items_setlist ON setlist_items(setlist_id);
+  CREATE INDEX IF NOT EXISTS idx_item_parts_item ON setlist_item_parts(setlist_item_id);
 `;
+
+/**
+ * Bring an already-populated database up to the current schema.
+ *
+ * Existing installs load their database straight from IndexedDB and never run
+ * SCHEMA, so new tables and columns have to be added explicitly. SCHEMA itself
+ * is all CREATE ... IF NOT EXISTS, so replaying it is safe and backfills any
+ * table added since that database was created.
+ */
+function migrate(db: SqlJsDatabase) {
+  db.run(SCHEMA);
+
+  const columns = (table: string): string[] => {
+    try {
+      return (db.exec(`PRAGMA table_info(${table})`)[0]?.values ?? []).map((r: any) => String(r[1]));
+    } catch {
+      return [];
+    }
+  };
+
+  if (!columns('setlists').includes('instruments')) {
+    db.run('ALTER TABLE setlists ADD COLUMN instruments TEXT');
+  }
+}
 
 let clientDb: ClientDb | null = null;
 
@@ -231,15 +264,17 @@ export async function initClientDb(): Promise<void> {
       if (res.ok) {
         const buf = await res.arrayBuffer();
         sqlJsDb = new SQL.Database(new Uint8Array(buf));
-        await saveToIDB(new Uint8Array(sqlJsDb.export()));
       }
     } catch (_) {}
     if (!sqlJsDb) {
       sqlJsDb = new SQL.Database();
       sqlJsDb.run(SCHEMA);
-      scheduleSave();
     }
   }
+
+  // Every path — restored, bundled, or fresh — is brought to the current schema.
+  migrate(sqlJsDb);
+  scheduleSave();
 
   clientDb = new ClientDb(sqlJsDb);
 }
@@ -256,6 +291,8 @@ export async function importDatabaseFile(data: Uint8Array): Promise<void> {
   });
 
   sqlJsDb = new SQL.Database(data);
+  // An exported database may predate the current schema.
+  migrate(sqlJsDb);
   clientDb = new ClientDb(sqlJsDb);
   await saveToIDB(new Uint8Array(sqlJsDb.export()));
 }

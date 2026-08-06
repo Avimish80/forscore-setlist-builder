@@ -1,6 +1,8 @@
 import { getClientDb } from './client-db';
 import { normalize, detectKey, detectVersionLabel, guessCleanTitle } from './normalizer';
 import { generateSetlistXml } from './generator';
+import { INSTRUMENT_WORDS, detectInstrument } from './instruments';
+import { getInstrumentView } from './parts';
 import { Score, MatchResult } from './types';
 import Fuse from 'fuse.js';
 
@@ -113,24 +115,47 @@ export function importScoresFromFiles(files: { name: string; size: number }[]): 
 
 // ── Score groups (Workbench) ──
 
-const INSTRUMENT_SUFFIXES = [
-  'full score', 'lead sheet', 'piano vocal', 'alto sax', 'tenor sax',
-  'piano', 'guitar', 'bass', 'violin', 'viola', 'cello', 'drums',
-  'saxophone', 'trumpet', 'trombone', 'flute', 'clarinet', 'horns',
-  'strings', 'vocal', 'singer', 'solo',
-];
-
 const MULTI_KEY_SUFFIX =
   /\s+(?:abm|a#m|bbm|bm|c#m|dbm|dm|d#m|ebm|em|f#m|fm|gbm|gm|g#m|am|cm|ab|a#|bb|c#|db|d#|eb|f#|gb|g#)$/i;
 
+/**
+ * Strip instrument and key suffixes so every variation of a song collapses to
+ * one key. Shared by the Workbench grouping and by instrument views.
+ */
+export function coreTitleOf(normalizedTitle: string): string {
+  return coreTitle(normalizedTitle);
+}
+
+/**
+ * Peel trailing part names, part numbers, and keys off a normalized title so
+ * "a million dreams strings violin i", "a million dreams piano 2", and
+ * "a million dreams" all collapse to one key.
+ *
+ * Repeats because real filenames stack these suffixes.
+ */
 function coreTitle(normalizedTitle: string): string {
   let t = normalizedTitle;
-  for (const inst of INSTRUMENT_SUFFIXES) {
-    t = t.replace(new RegExp(`\\s+${inst}$`), '');
+
+  for (let pass = 0; pass < 6; pass++) {
+    const before = t;
+
+    t = t.replace(/\s+\d+$/, '');                // copy or part number
+    t = t.replace(/\s+(?:i{1,3}|iv|v)$/i, '');   // "violin ii"
+    t = t.replace(MULTI_KEY_SUFFIX, '');
+    t = t.replace(/\s+[a-g]$/i, '');
+    t = t.replace(/\s+(?:major|minor)$/i, '');
+
+    for (const word of INSTRUMENT_WORDS) {
+      const stripped = t.replace(new RegExp(`\\s+${word}$`), '');
+      // A part name must never consume the whole title ("The Swan" → "The").
+      if (stripped !== t && stripped.trim()) { t = stripped; break; }
+    }
+
+    t = t.replace(/\s+/g, ' ').trim();
+    if (t === before) break;
   }
-  t = t.replace(MULTI_KEY_SUFFIX, '');
-  t = t.replace(/\s+[a-g]$/i, '');
-  return t.replace(/\s+/g, ' ').trim() || normalizedTitle;
+
+  return t || normalizedTitle;
 }
 
 export function getScoreGroups() {
@@ -446,6 +471,153 @@ export function rematchSetlist(setlistId: number) {
         .run(item.id);
     }
   }
+}
+
+// ── Instrument views ──
+
+/** Instruments this setlist has views for. Empty for every pre-existing setlist. */
+export function getSetlistInstruments(setlistId: number): string[] {
+  const row = getClientDb()
+    .prepare('SELECT instruments FROM setlists WHERE id = ?')
+    .get(setlistId) as { instruments: string | null } | null;
+  if (!row?.instruments) return [];
+  try {
+    const parsed = JSON.parse(row.instruments);
+    return Array.isArray(parsed) ? parsed.filter(x => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setSetlistInstruments(setlistId: number, instruments: string[]) {
+  getClientDb()
+    .prepare("UPDATE setlists SET instruments = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(JSON.stringify(instruments), setlistId);
+}
+
+/** Pin a specific score for one song in one instrument view. Beats detection. */
+export function setPartOverride(itemId: number, instrument: string, scoreId: number) {
+  getClientDb().prepare(`
+    INSERT INTO setlist_item_parts (setlist_item_id, instrument, score_id) VALUES (?, ?, ?)
+    ON CONFLICT(setlist_item_id, instrument) DO UPDATE SET score_id = excluded.score_id
+  `).run(itemId, instrument, scoreId);
+}
+
+/** Drop a manual choice and return that song to automatic detection. */
+export function clearPartOverride(itemId: number, instrument: string) {
+  getClientDb()
+    .prepare('DELETE FROM setlist_item_parts WHERE setlist_item_id = ? AND instrument = ?')
+    .run(itemId, instrument);
+}
+
+/** Export one instrument's view as its own .4ss file. */
+export function exportInstrumentSetlistXml(
+  setlistId: number,
+  instrument: string,
+): { xml: string; name: string } | null {
+  const db = getClientDb();
+  const setlist = db.prepare('SELECT name FROM setlists WHERE id = ?').get(setlistId) as { name: string } | null;
+  if (!setlist) return null;
+
+  const parts = getInstrumentView(setlistId, instrument);
+  const exportItems = parts.map(p => ({
+    requested_title: p.requested_title,
+    // Unresolved songs stay as placeholders so nothing vanishes in forScore.
+    match_status: p.is_separator || !p.score_id ? 'placeholder' : 'matched',
+    matched_score: p.score_id ? {
+      display_title: p.display_title as string,
+      forscore_path: p.forscore_path as string,
+    } : null,
+  }));
+
+  const name = `${setlist.name} - ${instrument}`;
+  return { xml: generateSetlistXml(name, exportItems), name };
+}
+
+// ── Instrument label backfill ──
+
+export interface BackfillRow {
+  id: number;
+  display_title: string;
+  original_filename: string;
+  instrument: string;
+}
+
+/**
+ * Scores with no instrument label whose filename identifies one.
+ *
+ * Preview only — nothing is written until applyInstrumentBackfill runs, and
+ * scores that already carry a label are never touched, so labels set by hand
+ * in the Workbench survive.
+ */
+export function previewInstrumentBackfill(): BackfillRow[] {
+  const rows = getClientDb().prepare(`
+    SELECT id, display_title, original_filename FROM scores
+    WHERE version_label IS NULL OR version_label = ''
+    ORDER BY display_title COLLATE NOCASE
+  `).all() as { id: number; display_title: string; original_filename: string }[];
+
+  const out: BackfillRow[] = [];
+  for (const r of rows) {
+    const found = detectInstrument(r.original_filename || r.display_title).instrument;
+    if (found) out.push({ ...r, instrument: found });
+  }
+  return out;
+}
+
+export interface CorrectionRow extends BackfillRow {
+  current: string;
+}
+
+/**
+ * Scores whose existing label disagrees with a high-confidence reading of the
+ * filename — only where the instrument sits in its own delimited segment, the
+ * shape forScore's part extraction produces.
+ *
+ * These matter for instrument views: a file named "…STRINGS - Viola.pdf" but
+ * labelled "Strings" can be handed to a violinist as the section chart, which
+ * is really the viola part. Presented for review; nothing is applied here.
+ */
+export function previewInstrumentCorrections(): CorrectionRow[] {
+  const rows = getClientDb().prepare(`
+    SELECT id, display_title, original_filename, version_label FROM scores
+    WHERE version_label IS NOT NULL AND version_label != ''
+    ORDER BY display_title COLLATE NOCASE
+  `).all() as { id: number; display_title: string; original_filename: string; version_label: string }[];
+
+  const out: CorrectionRow[] = [];
+  for (const r of rows) {
+    const d = detectInstrument(r.original_filename || r.display_title);
+    if (d.instrument && d.source === 'segment' && d.instrument !== r.version_label) {
+      out.push({
+        id: r.id,
+        display_title: r.display_title,
+        original_filename: r.original_filename,
+        instrument: d.instrument,
+        current: r.version_label,
+      });
+    }
+  }
+  return out;
+}
+
+/** Apply reviewed corrections. Unlike backfill this does overwrite a label. */
+export function applyInstrumentCorrections(rows: CorrectionRow[]): number {
+  const db = getClientDb();
+  const stmt = db.prepare("UPDATE scores SET version_label = ?, updated_at = datetime('now') WHERE id = ?");
+  let n = 0;
+  for (const r of rows) { stmt.run(r.instrument, r.id); n++; }
+  return n;
+}
+
+export function applyInstrumentBackfill(rows: BackfillRow[]): number {
+  const db = getClientDb();
+  const stmt = db.prepare(
+    "UPDATE scores SET version_label = ?, updated_at = datetime('now') WHERE id = ? AND (version_label IS NULL OR version_label = '')"
+  );
+  let n = 0;
+  for (const r of rows) { stmt.run(r.instrument, r.id); n++; }
+  return n;
 }
 
 // ── Settings ──

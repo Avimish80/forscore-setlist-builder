@@ -7,14 +7,12 @@ import { queryScores, updateScore, importScoresFromFiles, createAlias, getSetlis
 import InlinePdfViewer from '@/components/InlinePdfViewer';
 import StatusBadge from '@/components/StatusBadge';
 import { writeMetadataToPdf } from '@/lib/pdf-metadata';
+import { INSTRUMENTS as ALL_INSTRUMENTS } from '@/lib/instruments';
 
 const LETTERS = ['#', ...Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 'עב'];
 
-const INSTRUMENTS = [
-  'Generic', 'Lead Sheet', 'Piano', 'Piano/Vocal', 'Guitar', 'Bass',
-  'Violin', 'Viola', 'Cello', 'Drums', 'Saxophone', 'Alto Sax', 'Tenor Sax',
-  'Trumpet', 'Trombone', 'Flute', 'Clarinet', 'Horns', 'Strings', 'Full Score', 'Other',
-];
+// 'Generic' is the UI name for an empty instrument label — a score any player reads.
+const INSTRUMENTS = ['Generic', ...ALL_INSTRUMENTS];
 
 const KEYS = [
   '', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'G#', 'Ab', 'A', 'A#', 'Bb', 'B',
