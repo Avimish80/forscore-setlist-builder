@@ -1,0 +1,6 @@
+# Local forScore backups — hundreds of MB, and the app reads them at runtime
+# from the user's device, never from the deployment.
+*.4sb
+*.4ss
+test-scores
+data
