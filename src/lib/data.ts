@@ -495,6 +495,27 @@ export function setSetlistInstruments(setlistId: number, instruments: string[]) 
     .run(JSON.stringify(instruments), setlistId);
 }
 
+export interface InstrumentUsage {
+  name: string;
+  count: number;
+}
+
+/**
+ * Instruments actually labelled on scores in the library, most-used first.
+ * Lets the "+ Instruments" picker lead with what you really have charts for
+ * instead of the full fixed vocabulary, without losing any option — the
+ * picker still offers every instrument, just grouped by whether it's used yet.
+ */
+export function getInstrumentUsage(): InstrumentUsage[] {
+  return getClientDb().prepare(`
+    SELECT version_label as name, COUNT(*) as count
+    FROM scores
+    WHERE version_label IS NOT NULL AND version_label != '' AND status != 'ignored'
+    GROUP BY version_label
+    ORDER BY count DESC, name COLLATE NOCASE ASC
+  `).all() as InstrumentUsage[];
+}
+
 /** Pin a specific score for one song in one instrument view. Beats detection. */
 export function setPartOverride(itemId: number, instrument: string, scoreId: number) {
   getClientDb().prepare(`

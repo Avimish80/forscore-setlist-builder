@@ -11,7 +11,7 @@ import {
   reorderSetlistItems, addSetlistItem, addSeparatorItem, rematchSetlist,
   exportSetlistXml, searchScores, createAlias, renameSetlist,
   getScore, updateScore,
-  getSetlistInstruments, setSetlistInstruments,
+  getSetlistInstruments, setSetlistInstruments, getInstrumentUsage, InstrumentUsage,
   setPartOverride, clearPartOverride, exportInstrumentSetlistXml,
 } from '@/lib/data';
 import { getInstrumentView, getVariationsForItem, resolvePartForItem, ResolvedPart, PartSource } from '@/lib/parts';
@@ -116,6 +116,7 @@ export default function SetlistReviewPage() {
   const [activeView, setActiveView] = useState<string | null>(null);
   const [viewParts, setViewParts] = useState<ResolvedPart[]>([]);
   const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
+  const [instrumentUsage, setInstrumentUsage] = useState<InstrumentUsage[]>([]);
   const [overrideFor, setOverrideFor] = useState<number | null>(null);
   const [overrideChoices, setOverrideChoices] = useState<Score[]>([]);
   const [savingAll, setSavingAll] = useState(false);
@@ -164,6 +165,10 @@ export default function SetlistReviewPage() {
 
   useEffect(() => { setInstruments(getSetlistInstruments(id)); }, [id]);
   useEffect(() => { refreshView(); }, [refreshView, items]);
+
+  // What instruments actually have labelled charts right now — read fresh
+  // each time the picker opens so a recent edit or backfill shows up.
+  useEffect(() => { if (showInstrumentPicker) setInstrumentUsage(getInstrumentUsage()); }, [showInstrumentPicker]);
 
   // The pill row defaults to whichever tab you're on: picking a new song, or
   // switching tabs, resets the quick-switch choice back to that default.
@@ -692,23 +697,52 @@ export default function SetlistReviewPage() {
               >
                 ＋ Instruments
               </button>
-              {showInstrumentPicker && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setShowInstrumentPicker(false)} />
-                  <div className="absolute left-0 top-full mt-1.5 w-56 max-h-72 overflow-y-auto bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 z-40 py-1">
-                    {ALL_INSTRUMENTS.map(name => (
-                      <button
-                        key={name}
-                        onClick={() => toggleInstrument(name)}
-                        className="w-full text-left px-3 py-1.5 text-xs bg-transparent border-0 rounded-none flex items-center gap-2 text-zinc-200 hover:bg-zinc-800"
-                      >
-                        <span className={`w-3.5 flex-shrink-0 ${instruments.includes(name) ? 'text-amber-300' : 'text-transparent'}`}>✓</span>
-                        {name}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
+              {showInstrumentPicker && (() => {
+                const usedNames = new Set(instrumentUsage.map(u => u.name));
+                const unusedInstruments = ALL_INSTRUMENTS.filter(name => !usedNames.has(name));
+                return (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setShowInstrumentPicker(false)} />
+                    <div className="absolute left-0 top-full mt-1.5 w-60 max-h-80 overflow-y-auto bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl shadow-black/50 z-40 py-1">
+                      {instrumentUsage.length > 0 && (
+                        <>
+                          <p className="px-3 pt-1.5 pb-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">In your library</p>
+                          {instrumentUsage.map(({ name, count }) => (
+                            <button
+                              key={name}
+                              onClick={() => toggleInstrument(name)}
+                              title={`${count} chart${count === 1 ? '' : 's'} labelled ${name}`}
+                              className="w-full text-left px-3 py-1.5 text-xs bg-transparent border-0 rounded-none flex items-center gap-2 text-zinc-200 hover:bg-zinc-800"
+                            >
+                              <span className={`w-3.5 flex-shrink-0 ${instruments.includes(name) ? 'text-amber-300' : 'text-transparent'}`}>✓</span>
+                              <span className="flex-1 truncate">{name}</span>
+                              <span className="text-zinc-500 text-[11px] tabular-nums flex-shrink-0">{count}</span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                      {unusedInstruments.length > 0 && (
+                        <>
+                          <p className={`px-3 pb-1 text-[10px] font-semibold text-zinc-600 uppercase tracking-wider ${instrumentUsage.length > 0 ? 'pt-2 mt-1 border-t border-zinc-800' : 'pt-1.5'}`}>
+                            No charts yet
+                          </p>
+                          {unusedInstruments.map(name => (
+                            <button
+                              key={name}
+                              onClick={() => toggleInstrument(name)}
+                              title={`No charts are labelled ${name} yet — add the view now and it fills in once one is`}
+                              className="w-full text-left px-3 py-1.5 text-xs bg-transparent border-0 rounded-none flex items-center gap-2 text-zinc-400 hover:bg-zinc-800"
+                            >
+                              <span className={`w-3.5 flex-shrink-0 ${instruments.includes(name) ? 'text-amber-300' : 'text-transparent'}`}>✓</span>
+                              <span className="flex-1 truncate">{name}</span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
