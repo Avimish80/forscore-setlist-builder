@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import StatusBadge from '@/components/StatusBadge';
 import InlinePdfViewer from '@/components/InlinePdfViewer';
+import PdfStatusBanner from '@/components/PdfStatusBanner';
 import { Score } from '@/lib/types';
 import {
   getSetlist, updateSetlistItem, deleteSetlistItem,
@@ -532,7 +533,9 @@ export default function SetlistReviewPage() {
   // ── Normal mode: split-pane ───────────────────────────────────────────────
   return (
     <>
-    <div className="flex h-full overflow-hidden" onClick={() => setStatusPickerFor(null)}>
+    <div className="flex flex-col h-full overflow-hidden" onClick={() => setStatusPickerFor(null)}>
+    <PdfStatusBanner />
+    <div className="flex flex-1 min-h-0 overflow-hidden">
 
       {/* ── Left: setlist items — full width on phones, hidden while viewing a chart ── */}
       <div className={`flex-col w-full md:w-[40%] md:min-w-[300px] border-r border-zinc-800 overflow-hidden ${mobilePane === 'pdf' ? 'hidden md:flex' : 'flex'}`}>
@@ -1226,6 +1229,7 @@ export default function SetlistReviewPage() {
           />
         </div>
       </div>
+    </div>
     </div>
 
     {/* ── Alias modal — identical to Library page ──────────────────────── */}

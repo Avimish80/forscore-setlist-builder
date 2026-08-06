@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { importDatabaseFile, exportDatabaseFile, getDbStats, clearDatabase } from '@/lib/client-db';
 import { import4sb, ImportProgress } from '@/lib/parse-4sb';
 import { getPdfCount, clearPdfs, listPdfFilenames } from '@/lib/pdf-store';
@@ -24,10 +24,27 @@ export default function SettingsPage() {
   const [fixes, setFixes] = useState<CorrectionRow[] | null>(null);
   const [labelMsg, setLabelMsg] = useState<string | null>(null);
 
+  const [storageNote, setStorageNote] = useState('');
+
+  const refreshStorage = useCallback(async () => {
+    if (!navigator.storage?.estimate) return;
+    try {
+      const { usage = 0, quota = 0 } = await navigator.storage.estimate();
+      const gb = (n: number) => (n / 1073741824).toFixed(1);
+      const persisted = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      setStorageNote(
+        `${gb(usage)} GB of ${gb(quota)} GB used${persisted ? ' · protected from cleanup' : ''}`
+      );
+    } catch {
+      // Storage estimates are best-effort; the note is simply omitted.
+    }
+  }, []);
+
   useEffect(() => {
     setStats(getDbStats());
     getPdfCount().then(setPdfCount);
-  }, []);
+    refreshStorage();
+  }, [refreshStorage]);
 
   async function handleImportDb(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -61,6 +78,12 @@ export default function SettingsPage() {
     if (!file) return;
     setBackupMsg(`Reading ${(file.size / 1024 / 1024).toFixed(0)} MB…`);
     setBackupProgress({ total: 0, done: 0, currentFile: 'Loading file…' });
+
+    // Ask the browser to keep this data. Charts can run to a gigabyte, and iOS
+    // evicts non-persistent storage when space runs low — which would silently
+    // empty the library after a successful import.
+    try { await navigator.storage?.persist?.(); } catch { /* best effort */ }
+
     try {
       const buffer = await file.arrayBuffer();
       setBackupProgress({ total: 0, done: 0, currentFile: 'Extracting PDFs…' });
@@ -76,9 +99,14 @@ export default function SettingsPage() {
       setStats(getDbStats());
       const newPdfCount = await getPdfCount();
       setPdfCount(newPdfCount);
+      refreshStorage();
     } catch (err: any) {
-      setBackupMsg(`Import failed: ${err.message}`);
+      const hint = /quota|storage|allocat/i.test(String(err?.message))
+        ? ' Your device ran out of space for this app — free some space and try again.'
+        : '';
+      setBackupMsg(`Import failed: ${err.message}.${hint}`);
       setBackupProgress(null);
+      refreshStorage();
     }
     if (backupRef.current) backupRef.current.value = '';
   }
@@ -109,24 +137,42 @@ export default function SettingsPage() {
 
       <div className="panel p-5 mb-6">
         <h2 className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-3">Database</h2>
-        <div className="grid grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-4 gap-3 text-center">
           <div>
             <p className="text-2xl font-bold text-amber-300 tabular-nums">{stats.scores}</p>
             <p className="text-xs text-zinc-500 mt-0.5">Scores</p>
           </div>
+          {/* Charts are counted separately and shown even at zero: the song list
+              ships with the app, the PDFs do not, and hiding the zero makes an
+              empty device look identical to a full one. */}
           <div>
-            <p className="text-2xl font-bold text-emerald-300 tabular-nums">{stats.setlists}</p>
+            <p className={`text-2xl font-bold tabular-nums ${pdfCount > 0 ? 'text-emerald-300' : 'text-red-400'}`}>{pdfCount}</p>
+            <p className="text-xs text-zinc-500 mt-0.5">Charts</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-zinc-300 tabular-nums">{stats.setlists}</p>
             <p className="text-xs text-zinc-500 mt-0.5">Setlists</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-violet-300 tabular-nums">{stats.aliases}</p>
+            <p className="text-2xl font-bold text-zinc-300 tabular-nums">{stats.aliases}</p>
             <p className="text-xs text-zinc-500 mt-0.5">Aliases</p>
           </div>
         </div>
-        {pdfCount > 0 && (
-          <p className="text-xs text-emerald-300 mt-4">{pdfCount} PDFs stored locally</p>
+
+        {pdfCount === 0 && stats.scores > 0 && (
+          <div className="mt-4 p-3 rounded-lg bg-amber-400/10 border border-amber-400/25">
+            <p className="text-xs text-amber-200">
+              <span className="font-semibold">No charts on this device.</span> Song titles, matching,
+              and setlists all work, but sheet music will show &ldquo;PDF not stored&rdquo; until you
+              import your forScore backup below. Charts live on each device separately, so this has
+              to be done once per phone, iPad, or browser.
+            </p>
+          </div>
         )}
-        <p className="text-xs text-zinc-500 mt-1">Data is stored locally on this device.</p>
+
+        <p className="text-xs text-zinc-500 mt-3">
+          Data is stored locally on this device{storageNote ? ` · ${storageNote}` : ''}.
+        </p>
       </div>
 
       <div className="panel p-5 mb-6">

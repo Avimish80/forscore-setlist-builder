@@ -6,6 +6,7 @@ import { Score } from '@/lib/types';
 import { queryScores, updateScore, importScoresFromFiles, createAlias, getSetlists, addSetlistItem, createSetlist } from '@/lib/data';
 import InlinePdfViewer from '@/components/InlinePdfViewer';
 import StatusBadge from '@/components/StatusBadge';
+import PdfStatusBanner from '@/components/PdfStatusBanner';
 import { writeMetadataToPdf } from '@/lib/pdf-metadata';
 import { INSTRUMENTS as ALL_INSTRUMENTS } from '@/lib/instruments';
 
@@ -180,7 +181,9 @@ export default function LibraryPage() {
   const end = Math.min(page * PAGE_SIZE, total);
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
+    <PdfStatusBanner />
+    <div className="flex flex-1 min-h-0 overflow-hidden">
 
       {/* ── Left: score list — full width on phones, 38% on tablet/desktop ── */}
       {/* On phones the list hides once a score is picked so the PDF gets the
@@ -569,6 +572,7 @@ export default function LibraryPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
