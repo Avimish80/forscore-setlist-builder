@@ -122,6 +122,74 @@ interface RawItem {
   match_status: string;
 }
 
+interface ScoresIndex {
+  byId: Map<number, Score>;
+  /** Every score grouped by its variation key, so a song's versions are one lookup. */
+  byCore: Map<string, Score[]>;
+}
+
+function buildScoresIndex(db: ReturnType<typeof getClientDb>): ScoresIndex {
+  const allScores = db.prepare('SELECT * FROM scores WHERE status != ?').all('ignored') as Score[];
+  const byId = new Map<number, Score>(allScores.map(s => [s.id, s]));
+
+  const byCore = new Map<string, Score[]>();
+  for (const s of allScores) {
+    const key = coreTitleOf(s.normalized_title);
+    const list = byCore.get(key);
+    if (list) list.push(s); else byCore.set(key, [s]);
+  }
+  return { byId, byCore };
+}
+
+/** Resolve one setlist item against one instrument. Shared by the full-view and single-song paths. */
+function resolveItem(
+  item: RawItem,
+  instrument: string,
+  index: ScoresIndex,
+  overrideScoreId: number | null | undefined,
+): ResolvedPart {
+  const base = {
+    item_id: item.id,
+    position: item.position,
+    requested_title: item.requested_title,
+    instrument,
+  };
+
+  if (item.match_status === 'placeholder') {
+    return {
+      ...base, is_separator: true,
+      score_id: null, display_title: null, forscore_path: null,
+      detected_key: null, version_label: null,
+      source: 'generic' as PartSource, reason: 'Section separator',
+    };
+  }
+
+  const anchor = item.matched_score_id ? index.byId.get(item.matched_score_id) ?? null : null;
+  const override = overrideScoreId ? index.byId.get(overrideScoreId) ?? null : null;
+
+  // Variations of this song: everything sharing the matched score's core
+  // title. With no match yet, fall back to the requested title so the song
+  // can still resolve once a matching file exists.
+  const key = anchor
+    ? coreTitleOf(anchor.normalized_title)
+    : coreTitleOf(item.requested_title.toLowerCase());
+  const variations = index.byCore.get(key) ?? (anchor ? [anchor] : []);
+
+  const { score, source, reason } = resolveForInstrument(variations, instrument, anchor, override);
+
+  return {
+    ...base,
+    is_separator: false,
+    score_id: score?.id ?? null,
+    display_title: score?.display_title ?? null,
+    forscore_path: score?.forscore_path ?? null,
+    detected_key: score?.detected_key ?? null,
+    version_label: score?.version_label ?? null,
+    source,
+    reason,
+  };
+}
+
 /**
  * Resolve every song in a setlist for one instrument, in setlist order.
  * Separators pass straight through so section breaks survive in every view.
@@ -134,16 +202,7 @@ export function getInstrumentView(setlistId: number, instrument: string): Resolv
   ).all(setlistId) as RawItem[];
   if (!items.length) return [];
 
-  const allScores = db.prepare('SELECT * FROM scores WHERE status != ?').all('ignored') as Score[];
-  const byId = new Map<number, Score>(allScores.map(s => [s.id, s]));
-
-  // Group every score by its variation key once, then look songs up by key.
-  const byCore = new Map<string, Score[]>();
-  for (const s of allScores) {
-    const key = coreTitleOf(s.normalized_title);
-    const list = byCore.get(key);
-    if (list) list.push(s); else byCore.set(key, [s]);
-  }
+  const index = buildScoresIndex(db);
 
   const overrideRows = db.prepare(`
     SELECT p.setlist_item_id, p.score_id FROM setlist_item_parts p
@@ -152,49 +211,35 @@ export function getInstrumentView(setlistId: number, instrument: string): Resolv
   `).all(setlistId, instrument) as { setlist_item_id: number; score_id: number | null }[];
   const overrides = new Map(overrideRows.map(r => [r.setlist_item_id, r.score_id]));
 
-  return items.map(item => {
-    const base = {
-      item_id: item.id,
-      position: item.position,
-      requested_title: item.requested_title,
-      instrument,
-    };
+  return items.map(item => resolveItem(item, instrument, index, overrides.get(item.id)));
+}
 
-    if (item.match_status === 'placeholder') {
-      return {
-        ...base, is_separator: true,
-        score_id: null, display_title: null, forscore_path: null,
-        detected_key: null, version_label: null,
-        source: 'generic' as PartSource, reason: 'Section separator',
-      };
-    }
+/**
+ * Resolve one song for one instrument, without computing the rest of the
+ * setlist's view. Powers the quick chart switcher above the PDF panel, which
+ * needs to know every instrument's score for whichever song is on screen,
+ * regardless of which tab is active.
+ */
+export function resolvePartForItem(itemId: number, instrument: string): ResolvedPart {
+  const db = getClientDb();
+  const item = db.prepare(
+    'SELECT id, position, requested_title, matched_score_id, match_status FROM setlist_items WHERE id = ?'
+  ).get(itemId) as RawItem | null;
 
-    const anchor = item.matched_score_id ? byId.get(item.matched_score_id) ?? null : null;
-    const overrideId = overrides.get(item.id);
-    const override = overrideId ? byId.get(overrideId) ?? null : null;
-
-    // Variations of this song: everything sharing the matched score's core
-    // title. With no match yet, fall back to the requested title so the song
-    // can still resolve once a matching file exists.
-    const key = anchor
-      ? coreTitleOf(anchor.normalized_title)
-      : coreTitleOf(item.requested_title.toLowerCase());
-    const variations = byCore.get(key) ?? (anchor ? [anchor] : []);
-
-    const { score, source, reason } = resolveForInstrument(variations, instrument, anchor, override);
-
+  if (!item) {
     return {
-      ...base,
-      is_separator: false,
-      score_id: score?.id ?? null,
-      display_title: score?.display_title ?? null,
-      forscore_path: score?.forscore_path ?? null,
-      detected_key: score?.detected_key ?? null,
-      version_label: score?.version_label ?? null,
-      source,
-      reason,
+      item_id: itemId, position: 0, requested_title: '', is_separator: false, instrument,
+      score_id: null, display_title: null, forscore_path: null, detected_key: null, version_label: null,
+      source: 'missing', reason: 'Song not found',
     };
-  });
+  }
+
+  const index = buildScoresIndex(db);
+  const overrideRow = db.prepare(
+    'SELECT score_id FROM setlist_item_parts WHERE setlist_item_id = ? AND instrument = ?'
+  ).get(itemId, instrument) as { score_id: number | null } | null;
+
+  return resolveItem(item, instrument, index, overrideRow?.score_id);
 }
 
 /** Candidate scores for a song, so the override picker can offer them first. */

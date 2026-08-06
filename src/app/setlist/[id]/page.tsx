@@ -14,7 +14,7 @@ import {
   getSetlistInstruments, setSetlistInstruments,
   setPartOverride, clearPartOverride, exportInstrumentSetlistXml,
 } from '@/lib/data';
-import { getInstrumentView, getVariationsForItem, ResolvedPart } from '@/lib/parts';
+import { getInstrumentView, getVariationsForItem, resolvePartForItem, ResolvedPart, PartSource } from '@/lib/parts';
 import { INSTRUMENTS as ALL_INSTRUMENTS } from '@/lib/instruments';
 import { writeMetadataToPdf } from '@/lib/pdf-metadata';
 
@@ -25,6 +25,13 @@ const KEYS = [
 
 // 'Generic' is the UI name for an empty instrument label — a score any player reads.
 const INSTRUMENTS = ['Generic', ...ALL_INSTRUMENTS];
+
+// Small status dot on each quick-switch pill, matching the badge colors used
+// in the instrument view list so the two stay visually consistent.
+const DOT_COLOR: Record<PartSource, string> = {
+  manual: 'bg-sky-400', exact: 'bg-emerald-400', family: 'bg-violet-400',
+  generic: 'bg-zinc-500', fallback: 'bg-amber-400', missing: 'bg-red-400',
+};
 
 interface ItemRow {
   id: number;
@@ -111,6 +118,17 @@ export default function SetlistReviewPage() {
   const [showInstrumentPicker, setShowInstrumentPicker] = useState(false);
   const [overrideFor, setOverrideFor] = useState<number | null>(null);
   const [overrideChoices, setOverrideChoices] = useState<Score[]>([]);
+  const [savingAll, setSavingAll] = useState(false);
+  const [savedAllMsg, setSavedAllMsg] = useState<string | null>(null);
+
+  // ── Quick chart switcher ──
+  // Which instrument's chart is shown for the selected song, independent of
+  // which tab is active — lets you peek at another player's part without
+  // leaving Main. null means "the song's own matched score" (Main).
+  const [chartInstrument, setChartInstrument] = useState<string | null>(null);
+  // Every configured instrument's resolution for the selected song, so the
+  // pill row can show a status dot per instrument without extra clicks.
+  const [chartOptions, setChartOptions] = useState<Record<string, ResolvedPart>>({});
 
   const touchDragIndex = useRef<number | null>(null);
   const isDragging = useRef(false);
@@ -146,6 +164,25 @@ export default function SetlistReviewPage() {
 
   useEffect(() => { setInstruments(getSetlistInstruments(id)); }, [id]);
   useEffect(() => { refreshView(); }, [refreshView, items]);
+
+  // The pill row defaults to whichever tab you're on: picking a new song, or
+  // switching tabs, resets the quick-switch choice back to that default.
+  useEffect(() => { setChartInstrument(activeView); }, [selectedItem?.id, activeView]);
+
+  // If the instrument currently shown was removed from the setlist's chosen
+  // list, fall back rather than keep displaying a chart for a dropped instrument.
+  useEffect(() => {
+    if (chartInstrument && !instruments.includes(chartInstrument)) setChartInstrument(activeView);
+  }, [instruments, activeView, chartInstrument]);
+
+  // Every instrument's resolution for the selected song — powers the pill
+  // row's status dots. Recomputes whenever the setlist or overrides change.
+  useEffect(() => {
+    if (!selectedItem || instruments.length === 0) { setChartOptions({}); return; }
+    const opts: Record<string, ResolvedPart> = {};
+    for (const name of instruments) opts[name] = resolvePartForItem(selectedItem.id, name);
+    setChartOptions(opts);
+  }, [selectedItem?.id, instruments, items]);
 
   function toggleInstrument(name: string) {
     const next = instruments.includes(name)
@@ -191,10 +228,72 @@ export default function SetlistReviewPage() {
     URL.revokeObjectURL(url);
   }
 
-  // Load full score details whenever selected item changes
+  /**
+   * Export the main setlist plus every instrument view in one action — the
+   * one-by-one "Save {View}" button still exists per tab for a single file.
+   */
+  async function handleSaveAll() {
+    if (savingAll) return;
+    setSavingAll(true);
+    setSavedAllMsg(null);
+
+    const results = [exportSetlistXml(id), ...instruments.map(name => exportInstrumentSetlistXml(id, name))]
+      .filter((r): r is { xml: string; name: string } => !!r);
+
+    if (results.length === 0) { setSavingAll(false); return; }
+
+    const files = results.map(r => new File(
+      [r.xml],
+      `${r.name.replace(/[^a-zA-Z0-9\s-]/g, '')}.4ss`,
+      { type: 'application/xml' },
+    ));
+
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, title: setlist?.name });
+        setSavingAll(false);
+        return;
+      } catch (_) {
+        // User cancelled the share sheet, or the OS declined multi-file share —
+        // fall through to individual downloads rather than leaving nothing saved.
+      }
+    }
+
+    for (let i = 0; i < files.length; i++) {
+      const url = URL.createObjectURL(files[i]);
+      const a = document.createElement('a');
+      a.href = url; a.download = files[i].name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      // iOS Safari can drop a second download triggered in the same tick.
+      if (i < files.length - 1) await new Promise(r => setTimeout(r, 300));
+    }
+
+    setSavingAll(false);
+    setSavedAllMsg(`Saved ${files.length} files ✓`);
+    setTimeout(() => setSavedAllMsg(null), 4000);
+  }
+
+  // Load the score currently shown in the PDF panel — the song's own match on
+  // Main, or whichever instrument's resolved part the quick switcher picked.
+  // Edit / Save then naturally act on whatever is actually on screen.
   useEffect(() => {
-    if (!selectedItem?.matched_score_id) { setSelectedScore(null); return; }
-    const s = getScore(selectedItem.matched_score_id);
+    if (!selectedItem) { setSelectedScore(null); return; }
+
+    const scoreId = chartInstrument
+      ? resolvePartForItem(selectedItem.id, chartInstrument).score_id
+      : selectedItem.matched_score_id;
+
+    if (!scoreId) {
+      setSelectedScore(null);
+      setShowScoreEdit(false);
+      setScoreSaved(false);
+      return;
+    }
+
+    const s = getScore(scoreId);
     setSelectedScore(s);
     setScoreEdit({
       display_title: s?.display_title ?? '',
@@ -205,7 +304,7 @@ export default function SetlistReviewPage() {
     });
     setShowScoreEdit(false);
     setScoreSaved(false);
-  }, [selectedItem?.id, selectedItem?.matched_score_id]);
+  }, [selectedItem?.id, selectedItem?.matched_score_id, chartInstrument, items]);
 
   // ── Edit-order mode ──────────────────────────────────────────────────────
   function enterEditMode() {
@@ -614,10 +713,21 @@ export default function SetlistReviewPage() {
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-1.5 flex-wrap">
-            <button onClick={handleExportView} title={activeView ? `Export the ${activeView} view as its own .4ss file for forScore` : 'Export and share the .4ss setlist file — opens directly in forScore'} className="btn-primary text-xs px-3 py-1.5 rounded-md">
+          <div className="flex gap-1.5 flex-wrap items-center">
+            <button onClick={handleExportView} title={activeView ? `Export just the ${activeView} view as its own .4ss file for forScore` : 'Export and share the .4ss setlist file — opens directly in forScore'} className="btn-primary text-xs px-3 py-1.5 rounded-md">
               {activeView ? `Save ${activeView}` : 'Save Set List'}
             </button>
+            {instruments.length > 0 && (
+              <button
+                onClick={handleSaveAll}
+                disabled={savingAll}
+                title={`Export the main setlist and every instrument view in one go — ${instruments.length + 1} .4ss files`}
+                className="btn-secondary text-xs px-2.5 py-1.5 rounded-md disabled:opacity-50"
+              >
+                {savingAll ? 'Saving…' : `Save All (${instruments.length + 1})`}
+              </button>
+            )}
+            {savedAllMsg && <span className="text-emerald-400 text-xs">{savedAllMsg}</span>}
             {/* Songs are added, reordered, and re-matched on the main setlist;
                 instrument views follow it automatically. */}
             {!activeView && (
@@ -778,13 +888,9 @@ export default function SetlistReviewPage() {
                   <div
                     className="flex items-center gap-2 px-2 py-2 cursor-pointer"
                     onClick={() => {
-                      if (!part.forscore_path) return;
-                      // Show this instrument's chart, not the main setlist's.
-                      setPreviewScore({
-                        id: part.score_id, display_title: part.display_title,
-                        forscore_path: part.forscore_path, detected_key: part.detected_key,
-                        version_label: part.version_label,
-                      } as Score);
+                      // chartInstrument syncs to activeView automatically, which
+                      // resolves this song's score for the tab's instrument —
+                      // including showing the "missing" state honestly.
                       setSelectedItem(items.find(i => i.id === part.item_id) ?? null);
                       setMobilePane('pdf');
                     }}
@@ -1116,30 +1222,63 @@ export default function SetlistReviewPage() {
                     >✎</button>
                   )}
                 </div>
-                {/* File title (if different) with its own ✎ */}
-                {selectedItem.matched_display_title && selectedItem.matched_display_title !== selectedItem.requested_title && (
+                {/* File title (if different) with its own ✎ — reflects whichever
+                    instrument's chart is on screen, not always Main's match */}
+                {selectedScore && selectedScore.display_title !== selectedItem.requested_title && (
                   <div className="flex items-center gap-1 group/filetitle">
-                    <p className="text-xs text-zinc-500 truncate">→ {selectedItem.matched_display_title}</p>
-                    {selectedScore && (
-                      <button
-                        onClick={handleEditTitle}
-                        title="Edit the file's display title"
-                        className="text-zinc-600 hover:text-amber-300 opacity-0 group-hover/filetitle:opacity-100 text-xs bg-transparent border-0 p-0 flex-shrink-0"
-                      >✎</button>
-                    )}
+                    <p className="text-xs text-zinc-500 truncate">→ {selectedScore.display_title}</p>
+                    <button
+                      onClick={handleEditTitle}
+                      title="Edit the file's display title"
+                      className="text-zinc-600 hover:text-amber-300 opacity-0 group-hover/filetitle:opacity-100 text-xs bg-transparent border-0 p-0 flex-shrink-0"
+                    >✎</button>
                   </div>
+                )}
+                {!selectedScore && chartInstrument && (
+                  <p className="text-xs text-red-400/80 truncate">No {chartInstrument} chart for this song</p>
                 )}
               </div>
               {selectedScore?.detected_key && <span className="chip-key">{selectedScore.detected_key}</span>}
               {selectedScore?.version_label && <span className="chip-inst">{selectedScore.version_label}</span>}
-              <button
-                onClick={() => { setShowScoreEdit(v => !v); setScoreSaved(false); }}
-                title="Edit this score's key, instrument, and status"
-                className={`flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg ${showScoreEdit ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
-              >
-                Edit
-              </button>
+              {selectedScore && (
+                <button
+                  onClick={() => { setShowScoreEdit(v => !v); setScoreSaved(false); }}
+                  title="Edit this score's key, instrument, and status"
+                  className={`flex-shrink-0 text-xs px-2.5 py-1.5 rounded-lg ${showScoreEdit ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'btn-secondary'}`}
+                >
+                  Edit
+                </button>
+              )}
             </div>
+
+            {/* Quick chart switcher — jump between this song's instrument
+                parts without leaving the current tab or re-searching */}
+            {instruments.length > 0 && (
+              <div className="flex items-center gap-1 px-3 pb-2 flex-wrap">
+                <span className="text-[10px] text-zinc-600 uppercase tracking-wider mr-0.5 flex-shrink-0">Chart:</span>
+                <button
+                  onClick={() => setChartInstrument(null)}
+                  title="This song's main matched score"
+                  className={`text-[11px] px-2 py-1 rounded-md flex-shrink-0 ${chartInstrument === null ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 bg-transparent'}`}
+                >
+                  Main
+                </button>
+                {instruments.map(name => {
+                  const opt = chartOptions[name];
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setChartInstrument(name)}
+                      title={opt ? opt.reason : `Switch to the ${name} chart for this song`}
+                      className={`flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-md flex-shrink-0 ${chartInstrument === name ? 'bg-amber-400/15 text-amber-300 ring-1 ring-inset ring-amber-400/30' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 bg-transparent'}`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${opt ? DOT_COLOR[opt.source] : 'bg-zinc-600'}`} />
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Edit form — identical layout to Library page */}
             {showScoreEdit && selectedScore && (
@@ -1214,17 +1353,31 @@ export default function SetlistReviewPage() {
 
         <div className="flex-1 overflow-hidden">
           <InlinePdfViewer
-            filename={previewScore?.forscore_path ?? selectedItem?.matched_forscore_path ?? null}
+            filename={previewScore?.forscore_path ?? selectedScore?.forscore_path ?? null}
             placeholder={
-              <div className="text-center text-zinc-500">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-zinc-700">
-                  <path d="M9 18V5l12-2v13" />
-                  <circle cx="6" cy="18" r="3" />
-                  <circle cx="18" cy="16" r="3" />
-                </svg>
-                <p className="text-sm font-medium text-zinc-400">Tap a matched song</p>
-                <p className="text-xs mt-1 text-zinc-600">The chart will appear here</p>
-              </div>
+              chartInstrument && selectedItem && !selectedScore ? (
+                <div className="text-center text-zinc-500">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-zinc-700">
+                    <path d="M9 18V5l12-2v13" />
+                    <circle cx="6" cy="18" r="3" />
+                    <circle cx="18" cy="16" r="3" />
+                  </svg>
+                  <p className="text-sm font-medium text-zinc-400">No {chartInstrument} chart</p>
+                  <p className="text-xs mt-1 text-zinc-600 max-w-xs mx-auto">
+                    Use Choose… on the {chartInstrument} tab to pick one for &ldquo;{selectedItem.requested_title}&rdquo;
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center text-zinc-500">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 mx-auto mb-4 text-zinc-700">
+                    <path d="M9 18V5l12-2v13" />
+                    <circle cx="6" cy="18" r="3" />
+                    <circle cx="18" cy="16" r="3" />
+                  </svg>
+                  <p className="text-sm font-medium text-zinc-400">Tap a matched song</p>
+                  <p className="text-xs mt-1 text-zinc-600">The chart will appear here</p>
+                </div>
+              )
             }
           />
         </div>
