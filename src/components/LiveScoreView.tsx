@@ -9,14 +9,19 @@
  *   swipe left / right     previous and next song
  *   tap the left edge      previous song
  *   tap the right edge     next song
- *   tap the middle         the song bar rolls in from the left; tap again to dismiss
+ *   tap the middle         a list of every song slides in from the left edge,
+ *                          exactly like tapping the score in forScore
  *   swipe up / down        the pages of a multi-page chart, one screenful each
  *   arrow keys / page keys the same as tapping the edges, so a page pedal works
  *
- * The only thing ever allowed over the music is the notice bar: a thin
- * translucent strip at the top, used when the leader has moved on and the
- * player may want to follow. It is readable at a glance, ignorable mid-phrase,
- * and one tap wide.
+ * The song list never lingers: picking a song, or tapping anywhere else,
+ * closes it immediately and drops straight back into the chart — it is a
+ * momentary detour for finding your place, not a screen of its own.
+ *
+ * The only thing that sits over the music on its own, uninvited, is the
+ * notice bar: a thin translucent strip at the top, used when the leader has
+ * moved on and the player may want to follow. It is readable at a glance,
+ * ignorable mid-phrase, and one tap wide.
  */
 
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
@@ -71,8 +76,8 @@ export default function LiveScoreView({
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
-  const stripRef = useRef<HTMLDivElement>(null);
-  const activeCardRef = useRef<HTMLButtonElement>(null);
+  const drawerListRef = useRef<HTMLDivElement>(null);
+  const activeRowRef = useRef<HTMLButtonElement>(null);
 
   const touchRef = useRef<{ x: number; y: number; t: number } | null>(null);
   const suppressClick = useRef(false);
@@ -184,11 +189,11 @@ export default function LiveScoreView({
   // A new song always starts at its first page.
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; }, [filename, currentPosition]);
 
-  // Bring the current song into view whenever the bar rolls in.
+  // Bring the current song into view whenever the list slides in.
   useEffect(() => {
     if (!menuOpen) return;
     const t = setTimeout(() => {
-      activeCardRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' });
+      activeRowRef.current?.scrollIntoView({ block: 'center' });
     }, 60);
     return () => clearTimeout(t);
   }, [menuOpen, currentPosition]);
@@ -300,42 +305,51 @@ export default function LiveScoreView({
         </button>
       )}
 
-      {/* ── Song bar — rolls in from the left ───────────────────────────── */}
+      {/* ── Backdrop — dims the chart while the list is out; any tap on it
+          bubbles to the root handler below and closes the list ─────────── */}
       <div
-        className={`absolute inset-x-0 bottom-0 z-30 transition-transform duration-300 ease-out
+        aria-hidden
+        className={`absolute inset-0 z-30 bg-black/50 transition-opacity duration-300
+                    ${menuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+      />
+
+      {/* ── Song list — slides in from the left, like tapping the score in
+          forScore. A momentary detour: picking a song, or tapping anywhere
+          outside it, drops straight back into the chart. ──────────────── */}
+      <div
+        className={`absolute inset-y-0 left-0 z-40 w-[85%] max-w-sm flex flex-col
+                    bg-zinc-950/95 backdrop-blur-md border-r border-zinc-800
+                    transition-transform duration-300 ease-out
                     ${menuOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none'}`}
         onClick={e => e.stopPropagation()}
       >
         {menuContent && (
-          <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-800">
+          <div className="flex-shrink-0 flex flex-col gap-2 px-3 py-3 border-b border-zinc-800
+                           pt-[max(0.75rem,env(safe-area-inset-top))]">
             {menuContent}
           </div>
         )}
 
-        <div
-          ref={stripRef}
-          className="live-scroll flex gap-2 overflow-x-auto px-3 py-3 bg-zinc-950/95 backdrop-blur-md
-                     border-t border-zinc-800 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-        >
+        <div ref={drawerListRef} className="live-scroll flex-1 overflow-y-auto pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {items.map(item => {
             const active = item.position === currentPosition;
             return (
               <button
                 key={item.position}
-                ref={active ? activeCardRef : undefined}
+                ref={active ? activeRowRef : undefined}
                 onClick={() => { onSelect(item.position); setMenuOpen(false); }}
-                className={`flex-shrink-0 w-40 text-left px-3 py-2.5 rounded-xl border transition-colors ${
+                className={`flex items-center gap-2 w-full text-left px-3 py-2.5 border-b border-l-2 border-zinc-800/60 transition-colors ${
                   active
-                    ? 'bg-amber-400/15 border-amber-400/50 text-amber-200'
+                    ? 'bg-amber-400/15 border-l-amber-400 text-amber-200'
                     : item.isSeparator
-                      ? 'bg-zinc-900/80 border-zinc-800 text-zinc-400 italic'
-                      : 'bg-zinc-900 border-zinc-700 text-zinc-200'
+                      ? 'bg-zinc-900/60 border-l-transparent text-zinc-400 italic'
+                      : 'border-l-transparent text-zinc-100 hover:bg-zinc-900'
                 }`}
               >
                 {!item.isSeparator && (
-                  <span className="block text-[10px] tabular-nums opacity-60 mb-0.5">{item.position}</span>
+                  <span className="text-zinc-500 text-xs w-6 flex-shrink-0 text-right tabular-nums">{item.position}</span>
                 )}
-                <span className="block text-sm font-medium leading-tight line-clamp-2">{item.title}</span>
+                <span className="flex-1 min-w-0 text-sm font-medium truncate">{item.title}</span>
               </button>
             );
           })}
