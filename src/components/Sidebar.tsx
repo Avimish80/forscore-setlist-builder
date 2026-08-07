@@ -48,7 +48,7 @@ const NAV_ITEMS = [
   {
     href: '/live',
     label: 'Live',
-    title: 'Live — follow the leader during a performance. Join the session and your instrument’s chart follows the committed song.',
+    title: 'Live — perform any setlist full-screen, solo or synced. Pick a setlist to play it yourself, or join another device to follow along.',
     icon: (
       <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
         <path d="M10 3a7 7 0 00-4.95 11.95l1.414-1.414a5 5 0 117.072 0l1.414 1.414A7 7 0 0010 3z" />

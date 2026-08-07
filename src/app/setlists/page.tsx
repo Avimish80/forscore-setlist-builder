@@ -56,6 +56,13 @@ export default function SetlistsPage() {
                   <p className="text-xs text-zinc-500 mt-0.5">{new Date(sl.created_at).toLocaleDateString('en-GB')}</p>
                 </Link>
                 <Link
+                  href={`/setlist/${sl.id}/play`}
+                  title="Perform this setlist full-screen, right now — no setup, no hub required"
+                  className="text-xs px-3 py-1.5 rounded-lg flex-shrink-0 bg-emerald-400/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30 hover:bg-emerald-400/25 font-semibold"
+                >
+                  ▶ Live
+                </Link>
+                <Link
                   href={`/setlist/${sl.id}`}
                   title="Open this setlist to view, edit, and export it"
                   className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex-shrink-0"

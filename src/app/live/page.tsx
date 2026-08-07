@@ -1,18 +1,28 @@
 'use client';
 
 /**
- * Live — the musician's view during a performance.
+ * Live — full-screen performance, solo or synced.
  *
- * Join once, pick your instrument once, then the screen is your chart.
- * When the leader commits a new song a chip appears; tap it to jump there
- * (or switch on Follow automatically). Nothing here ever moves your chart
- * without you unless you asked it to.
+ * A hub and other devices are an enhancement, never a requirement: the
+ * landing screen always offers every local setlist for solo/leader
+ * performance first, with joining someone else's session as a secondary,
+ * clearly optional path underneath. A soloist with no hub in sight gets the
+ * full chart experience in one tap, same as everyone else.
+ *
+ * Once joined to a session: pick your instrument once, then the screen is
+ * your chart. When the leader commits a new song a chip appears; tap it to
+ * jump there (or switch on Follow automatically). Nothing here ever moves
+ * your chart without you unless you asked it to.
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import LiveScoreView from '@/components/LiveScoreView';
+import { getSetlists } from '@/lib/data';
 import { useFollowSession } from '@/lib/sync/use-follow-session';
 import { useWakeLock } from '@/lib/sync/use-wake-lock';
+
+interface SetlistRow { id: number; name: string }
 
 const CONN_DOT: Record<string, string> = {
   open: 'bg-emerald-400',
@@ -29,6 +39,7 @@ export default function LivePage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [autoFollow, setAutoFollow] = useState(false);
   const [displayedPosition, setDisplayedPosition] = useState<number | null>(null);
+  const [setlists, setSetlists] = useState<SetlistRow[] | null>(null);
 
   useWakeLock(session.joined);
 
@@ -38,6 +49,9 @@ export default function LivePage() {
       setInstrument(localStorage.getItem('live_instrument'));
       setAutoFollow(localStorage.getItem('live_autofollow') === '1');
     } catch (_) {}
+    // Always available regardless of hub connectivity — this is the local
+    // client-side database, nothing to do with the network.
+    setSetlists(getSetlists() as SetlistRow[]);
   }, []);
 
   // Follow the committed song: jump straight there on first arrival or when
@@ -89,97 +103,127 @@ export default function LivePage() {
       ? snapshot?.items.find(i => i.position === session.committedPosition) ?? null
       : null;
 
-  // ── Join screen ────────────────────────────────────────────────────────────
+  // ── Landing screen ───────────────────────────────────────────────────────
+  // A hub is an enhancement, never a gate: performing your own setlist,
+  // solo or as the leader, needs nothing but the local library — it works
+  // exactly the same with a hub twenty feet away or no hub in the world.
   if (!session.joined) {
     return (
       <div className="h-full overflow-y-auto bg-zinc-950">
         <div className="max-w-md mx-auto px-4 py-8">
           <h1 className="text-xl font-bold text-zinc-100 mb-1">Live</h1>
           <p className="text-sm text-zinc-500 mb-6">
-            Follow the leader&apos;s setlist during a performance.
+            Perform a setlist full-screen — on your own, or synced with the band.
           </p>
 
-          {session.error === 'session-ended' && (
-            <div className="mb-4 px-3 py-2 rounded-lg bg-zinc-800/80 text-zinc-300 text-sm">
-              The leader ended the session.
-            </div>
-          )}
-          {session.error === 'no-session' && (
-            <div className="mb-4 px-3 py-2 rounded-lg bg-amber-400/10 text-amber-300 text-sm flex items-center gap-2">
-              <span className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin inline-block flex-shrink-0" />
-              Session interrupted — rejoining as soon as it is back…
-            </div>
-          )}
-
-          {session.conn !== 'open' ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-400">
-              <div className="flex items-center gap-2 mb-2 text-amber-300">
-                <span className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin inline-block" />
-                <span className="font-medium">Looking for the band hub…</span>
-              </div>
-              <p>
-                Live mode needs the band hub. Join the hub&apos;s Wi-Fi and open the
-                hub&apos;s address on this device — the leader can read it off the
-                hub screen.
-              </p>
+          {/* ── Perform — always available, no hub required ──────────────── */}
+          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+            Your setlists
+          </p>
+          {setlists === null ? (
+            <p className="text-sm text-zinc-500 mb-7">Loading…</p>
+          ) : setlists.length === 0 ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500 mb-7">
+              No setlists yet.{' '}
+              <Link href="/setlist/new" className="text-amber-300 hover:text-amber-200">
+                Create one
+              </Link>{' '}
+              to perform from.
             </div>
           ) : (
-            <>
-              <label className="block text-xs font-medium text-zinc-400 mb-1">Your name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="e.g. Sarah"
-                className="w-full text-sm mb-5"
-              />
+            <div className="space-y-2 mb-7">
+              {setlists.map(sl => (
+                <Link
+                  key={sl.id}
+                  href={`/setlist/${sl.id}/play`}
+                  title="Full-screen performance view — swipe or tap to move between songs"
+                  className="flex items-center gap-3 px-3 py-3 rounded-xl border border-zinc-700 bg-zinc-900 hover:border-emerald-400/50 hover:bg-zinc-800/80 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-zinc-100 truncate">{sl.name}</p>
+                  </div>
+                  <span className="text-emerald-300 text-xs font-semibold flex-shrink-0">▶ Live</span>
+                </Link>
+              ))}
+            </div>
+          )}
 
-              {session.sessions.length > 0 && (
-                <div className="mb-5">
-                  <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                    Sessions on this hub
-                  </p>
-                  {session.sessions.map(s => (
-                    <button
-                      key={s.code}
-                      onClick={() => handleJoin(s.code)}
-                      className="flex items-center gap-3 w-full text-left px-3 py-3 mb-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:border-amber-400/50 hover:bg-zinc-800/80"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-zinc-100 truncate">{s.name}</p>
-                        <p className="text-xs text-zinc-500">
-                          {s.followerCount} joined{s.leaderPresent ? '' : ' · leader offline'}
-                        </p>
-                      </div>
-                      <span className="text-amber-300 font-bold tracking-[0.2em] text-sm flex-shrink-0">{s.code}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+          {/* ── Join someone else's session — optional, needs a hub ──────── */}
+          <div className="border-t border-zinc-800 pt-5">
+            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
+              Or follow another device
+            </p>
 
-              <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                Or enter a session code
+            {session.error === 'session-ended' && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-zinc-800/80 text-zinc-300 text-sm">
+                The leader ended the session.
+              </div>
+            )}
+            {session.error === 'no-session' && (
+              <div className="mb-4 px-3 py-2 rounded-lg bg-amber-400/10 text-amber-300 text-sm flex items-center gap-2">
+                <span className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin inline-block flex-shrink-0" />
+                Session interrupted — rejoining as soon as it is back…
+              </div>
+            )}
+
+            {session.conn !== 'open' ? (
+              <p className="text-xs text-zinc-600 leading-relaxed">
+                Not connected to a band hub right now. That is only needed to
+                follow along with someone else&apos;s device — performing your
+                own setlist above works with no hub at all.
               </p>
-              <div className="flex gap-2">
+            ) : (
+              <>
+                <label className="block text-xs font-medium text-zinc-400 mb-1">Your name</label>
                 <input
                   type="text"
-                  value={codeInput}
-                  onChange={e => setCodeInput(e.target.value.toUpperCase())}
-                  onKeyDown={e => { if (e.key === 'Enter' && codeInput.trim()) handleJoin(codeInput); }}
-                  placeholder="CODE"
-                  maxLength={6}
-                  className="flex-1 text-base font-bold tracking-[0.25em] uppercase"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="e.g. Sarah"
+                  className="w-full text-sm mb-4"
                 />
-                <button
-                  onClick={() => handleJoin(codeInput)}
-                  disabled={!codeInput.trim()}
-                  className="btn-primary text-sm px-5 py-2 rounded-lg disabled:opacity-40"
-                >
-                  Join
-                </button>
-              </div>
-            </>
-          )}
+
+                {session.sessions.length > 0 && (
+                  <div className="mb-4">
+                    {session.sessions.map(s => (
+                      <button
+                        key={s.code}
+                        onClick={() => handleJoin(s.code)}
+                        className="flex items-center gap-3 w-full text-left px-3 py-3 mb-2 rounded-xl border border-zinc-700 bg-zinc-900 hover:border-amber-400/50 hover:bg-zinc-800/80"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-zinc-100 truncate">{s.name}</p>
+                          <p className="text-xs text-zinc-500">
+                            {s.followerCount} joined{s.leaderPresent ? '' : ' · leader offline'}
+                          </p>
+                        </div>
+                        <span className="text-amber-300 font-bold tracking-[0.2em] text-sm flex-shrink-0">{s.code}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={codeInput}
+                    onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                    onKeyDown={e => { if (e.key === 'Enter' && codeInput.trim()) handleJoin(codeInput); }}
+                    placeholder="CODE"
+                    maxLength={6}
+                    className="flex-1 text-base font-bold tracking-[0.25em] uppercase"
+                  />
+                  <button
+                    onClick={() => handleJoin(codeInput)}
+                    disabled={!codeInput.trim()}
+                    className="btn-primary text-sm px-5 py-2 rounded-lg disabled:opacity-40"
+                  >
+                    Join
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     );
