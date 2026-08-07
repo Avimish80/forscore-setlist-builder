@@ -4,3 +4,6 @@
 *.4ss
 test-scores
 data
+
+# Local band-hub build — Vercel builds its own; this would just be dead weight.
+.next-hub

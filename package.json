@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "hub": "HUB_DIST_DIR=.next-hub node server.js",
+    "hub:build": "HUB_DIST_DIR=.next-hub next build && HUB_DIST_DIR=.next-hub node server.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
@@ -15,7 +17,8 @@
     "pdf-lib": "^1.17.1",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "sql.js": "^1.14.1"
+    "sql.js": "^1.14.1",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import StatusBadge from '@/components/StatusBadge';
 import InlinePdfViewer from '@/components/InlinePdfViewer';
@@ -109,6 +110,7 @@ export default function SetlistReviewPage() {
   // Alias modal (same as Library)
   const [aliasModal, setAliasModal] = useState<Score | null>(null);
   const [aliasText, setAliasText] = useState('');
+  const [aliasSavedFor, setAliasSavedFor] = useState<number | null>(null);
 
   // ── Instrument views ──
   // activeView is null for the main setlist, or an instrument name for a view.
@@ -511,6 +513,18 @@ export default function SetlistReviewPage() {
     setAliasText('');
   }
 
+  // Quick one-click alias from a setlist row: saves the typed title as an
+  // alias for its matched score, and immediately confirms the row instead of
+  // waiting for a separate Re-match click.
+  function handleAddAliasFromItem(item: ItemRow) {
+    if (!item.matched_score_id) return;
+    createAlias(item.requested_title, item.matched_score_id);
+    updateSetlistItem(item.id, { match_status: 'matched' });
+    load();
+    setAliasSavedFor(item.id);
+    setTimeout(() => setAliasSavedFor(current => (current === item.id ? null : current)), 2000);
+  }
+
   // ── Print ────────────────────────────────────────────────────────────────
   function handlePrint() {
     if (!setlist) return;
@@ -748,6 +762,13 @@ export default function SetlistReviewPage() {
 
           {/* Action buttons */}
           <div className="flex gap-1.5 flex-wrap items-center">
+            <Link
+              href={`/setlist/${id}/play`}
+              title="Playing Mode — full-screen charts for the gig, with live sync to the band's devices"
+              className="text-xs px-3 py-1.5 rounded-md bg-emerald-400/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30 hover:bg-emerald-400/25 font-semibold"
+            >
+              ▶ Play
+            </Link>
             <button onClick={handleExportView} title={activeView ? `Export just the ${activeView} view as its own .4ss file for forScore` : 'Export and share the .4ss setlist file — opens directly in forScore'} className="btn-primary text-xs px-3 py-1.5 rounded-md">
               {activeView ? `Save ${activeView}` : 'Save Set List'}
             </button>
@@ -1112,13 +1133,17 @@ export default function SetlistReviewPage() {
                     Sep.
                   </button>
                   {item.matched_score_id && (
-                    <button
-                      onClick={() => createAlias(item.requested_title, item.matched_score_id!)}
-                      title={`Save "${item.requested_title}" as an alias — future setlists will match it automatically`}
-                      className="text-zinc-500 hover:text-emerald-300 hover:bg-emerald-400/10 bg-transparent text-[11px] px-2 py-1 rounded"
-                    >
-                      Alias
-                    </button>
+                    aliasSavedFor === item.id ? (
+                      <span className="text-emerald-400 text-[11px] px-2 py-1">Saved ✓</span>
+                    ) : (
+                      <button
+                        onClick={() => handleAddAliasFromItem(item)}
+                        title={`Save "${item.requested_title}" as an alias — future setlists will match it automatically`}
+                        className="text-zinc-500 hover:text-emerald-300 hover:bg-emerald-400/10 bg-transparent text-[11px] px-2 py-1 rounded"
+                      >
+                        Alias
+                      </button>
+                    )
                   )}
                   <button
                     onClick={() => handleRemoveItem(item.id)}

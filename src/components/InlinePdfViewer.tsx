@@ -11,34 +11,12 @@
 
 import { useEffect, useRef, useState, Component, ReactNode } from 'react';
 import { getPdf } from '@/lib/pdf-store';
+import { loadPdfjs } from '@/lib/pdfjs';
 
 interface Props {
   filename: string | null;
   /** Optional content shown when no filename is selected */
   placeholder?: ReactNode;
-}
-
-// Load PDF.js v3 UMD bundle via a <script> tag.
-// Exact same pattern as sql.js — bypasses webpack, works on iPad PWA.
-function loadPdfjs(): Promise<any> {
-  return new Promise((resolve, reject) => {
-    if ((window as any).pdfjsLib) {
-      const lib = (window as any).pdfjsLib;
-      if (lib.GlobalWorkerOptions) lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-      resolve(lib);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = '/pdfjs.min.js';
-    script.onload = () => {
-      const lib = (window as any).pdfjsLib;
-      if (!lib) { reject(new Error('pdfjsLib not found on window after script load')); return; }
-      lib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-      resolve(lib);
-    };
-    script.onerror = () => reject(new Error('Failed to load /pdfjs.min.js'));
-    document.head.appendChild(script);
-  });
 }
 
 // Error boundary — isolates PDF crashes from the rest of the app.

@@ -78,6 +78,52 @@ body {
   background: #3f3f46;
 }
 
+/* ── Live mode ─────────────────────────────────────────────────────────── */
+/* The notice bar sits over sheet music, which is white — a pale amber wash
+   would be invisible there. So it is smoked glass: dark enough that amber
+   text stays legible over paper, sheer enough that the staves show through.
+   It breathes rather than blinks; the glow and the edge move while the text
+   holds full opacity, so it catches the eye between phrases without ever
+   competing with the music underneath it. */
+.live-notice-base {
+  background-color: rgba(24, 24, 27, 0.72);
+}
+
+@keyframes live-glow {
+  0%, 100% {
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
+    border-bottom-color: rgba(251, 191, 36, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(251, 191, 36, 0.6);
+    border-bottom-color: rgba(251, 191, 36, 0.9);
+  }
+}
+
+.live-notice {
+  animation: live-glow 2.6s ease-in-out infinite;
+}
+
+/* No scrollbars over the music — they steal width from the page and read as
+   clutter on a stand. Live mode is navigated by gesture, not by dragging. */
+.live-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.live-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-notice {
+    animation: none;
+    box-shadow: 0 0 26px rgba(251, 191, 36, 0.45);
+    border-bottom-color: rgba(251, 191, 36, 0.7);
+  }
+}
+
 /* ── Help mode ─────────────────────────────────────────────────────────── */
 /* When help mode is active, every element with a title attribute gets
    a soft amber ring so the user knows they can hover for an explanation. */

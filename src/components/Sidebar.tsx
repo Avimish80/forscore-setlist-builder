@@ -46,6 +46,19 @@ const NAV_ITEMS = [
     ),
   },
   {
+    href: '/live',
+    label: 'Live',
+    title: 'Live — follow the leader during a performance. Join the session and your instrument’s chart follows the committed song.',
+    icon: (
+      <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+        <path d="M10 3a7 7 0 00-4.95 11.95l1.414-1.414a5 5 0 117.072 0l1.414 1.414A7 7 0 0010 3z" />
+        <path d="M10 6.5a3.5 3.5 0 00-2.475 5.975l1.414-1.414a1.5 1.5 0 112.122 0l1.414 1.414A3.5 3.5 0 0010 6.5z" />
+        <circle cx="10" cy="13.5" r="1.5" />
+        <path d="M9.25 14.5h1.5L11.5 18h-3l.75-3.5z" />
+      </svg>
+    ),
+  },
+  {
     href: '/settings',
     label: 'Settings',
     title: 'Settings — import your forScore backup (.4sb) to load all charts. Export or import the score database. Clear all data if starting fresh.',

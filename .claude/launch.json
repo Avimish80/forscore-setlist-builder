@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "autoPort": true
+    },
+    {
+      "name": "band-hub",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "hub"],
+      "port": 3000,
+      "autoPort": false
     }
   ]
 }
