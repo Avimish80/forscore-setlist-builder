@@ -45,9 +45,38 @@ export default function PlayingModePage() {
   const [loading, setLoading] = useState(true);
   const [browsedPosition, setBrowsedPosition] = useState(1);
   const [myView, setMyView] = useState<string>(MAIN_VIEW);
+  const [hubUrl, setHubUrl] = useState('');
+  const [showLiveIntro, setShowLiveIntro] = useState(false);
+  const [addressCopied, setAddressCopied] = useState(false);
 
   const live = useLiveSession(id, name);
   useWakeLock(true);
+
+  // The address every other device needs is simply the one this page is
+  // already open on — a follower is never on a different machine's origin,
+  // they're on THIS hub's. Read once the browser is available.
+  useEffect(() => { setHubUrl(window.location.origin); }, []);
+
+  // The moment the session actually goes live, show it once, clearly —
+  // this is the single fact the whole band needs and the only place it was
+  // previously visible was a terminal banner nobody performing ever sees.
+  const introShown = useRef(false);
+  useEffect(() => {
+    if (live.status === 'live' && !introShown.current) {
+      introShown.current = true;
+      setShowLiveIntro(true);
+    }
+  }, [live.status]);
+
+  function copyHubUrl() {
+    const url = `${hubUrl}/live`;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(
+        () => { setAddressCopied(true); setTimeout(() => setAddressCopied(false), 2000); },
+        () => {}, // Clipboard is unavailable on plain-http origins in some browsers — the text is still on screen to read or select.
+      );
+    }
+  }
 
   useEffect(() => {
     const data = getSetlist(id) as { name: string; items: ItemRow[] } | null;
@@ -119,6 +148,47 @@ export default function PlayingModePage() {
   const isCommitted = live.committedPosition === browsedPosition;
 
   return (
+    <>
+    {showLiveIntro && (
+      <div
+        className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-5"
+        onClick={() => setShowLiveIntro(false)}
+      >
+        <div
+          className="w-full max-w-sm rounded-2xl border border-amber-400/30 bg-zinc-900 shadow-2xl shadow-black/60 p-6 text-center"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-sm font-semibold text-emerald-300 uppercase tracking-widest">You&apos;re live</span>
+          </div>
+
+          <p className="text-[11px] text-zinc-500 uppercase tracking-wider mb-1">Session code</p>
+          <p className="text-4xl font-bold tracking-[0.3em] text-amber-300 tabular-nums mb-5">{live.code}</p>
+
+          <p className="text-[11px] text-zinc-500 uppercase tracking-wider mb-1">Musicians open this address</p>
+          <p className="text-base font-mono text-zinc-100 break-all mb-1">{hubUrl || '…'}</p>
+          <p className="text-xs text-zinc-500 mb-4">
+            Same Wi-Fi, then the <span className="text-zinc-300">Live</span> tab — this session will already be listed.
+          </p>
+
+          <div className="flex gap-2">
+            <button
+              onClick={copyHubUrl}
+              className="btn-secondary flex-1 text-sm py-2 rounded-lg"
+            >
+              {addressCopied ? 'Copied ✓' : 'Copy address'}
+            </button>
+            <button
+              onClick={() => setShowLiveIntro(false)}
+              className="btn-primary flex-1 text-sm py-2 rounded-lg"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     <LiveScoreView
       filename={filename}
       title={browsed?.requested_title ?? name}
@@ -160,9 +230,13 @@ export default function PlayingModePage() {
             <>
               <span className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[live.status]}`} />
               {live.code && (
-                <span className="text-sm font-bold tracking-[0.2em] text-amber-300 tabular-nums flex-shrink-0">
+                <button
+                  onClick={() => setShowLiveIntro(true)}
+                  title="Show the join code and address again"
+                  className="text-sm font-bold tracking-[0.2em] text-amber-300 tabular-nums flex-shrink-0 bg-transparent border-0 p-0"
+                >
                   {live.code}
-                </span>
+                </button>
               )}
               <span className="text-xs text-zinc-400 tabular-nums flex-shrink-0">
                 {live.followers.length} joined
@@ -198,5 +272,6 @@ export default function PlayingModePage() {
         </div>
       }
     />
+    </>
   );
 }

@@ -764,10 +764,10 @@ export default function SetlistReviewPage() {
           <div className="flex gap-1.5 flex-wrap items-center">
             <Link
               href={`/setlist/${id}/play`}
-              title="Playing Mode — full-screen charts for the gig, with live sync to the band's devices"
+              title="Full-screen charts for the gig, with optional live sync to the band's devices"
               className="text-xs px-3 py-1.5 rounded-md bg-emerald-400/15 text-emerald-300 ring-1 ring-inset ring-emerald-400/30 hover:bg-emerald-400/25 font-semibold"
             >
-              ▶ Play
+              ▶ Live
             </Link>
             <button onClick={handleExportView} title={activeView ? `Export just the ${activeView} view as its own .4ss file for forScore` : 'Export and share the .4ss setlist file — opens directly in forScore'} className="btn-primary text-xs px-3 py-1.5 rounded-md">
               {activeView ? `Save ${activeView}` : 'Save Set List'}

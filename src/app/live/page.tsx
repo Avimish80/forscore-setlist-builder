@@ -40,6 +40,7 @@ export default function LivePage() {
   const [autoFollow, setAutoFollow] = useState(false);
   const [displayedPosition, setDisplayedPosition] = useState<number | null>(null);
   const [setlists, setSetlists] = useState<SetlistRow[] | null>(null);
+  const [hubUrl, setHubUrl] = useState('');
 
   useWakeLock(session.joined);
 
@@ -52,6 +53,7 @@ export default function LivePage() {
     // Always available regardless of hub connectivity — this is the local
     // client-side database, nothing to do with the network.
     setSetlists(getSetlists() as SetlistRow[]);
+    setHubUrl(window.location.origin);
   }, []);
 
   // Follow the committed song: jump straight there on first arrival or when
@@ -112,55 +114,73 @@ export default function LivePage() {
       <div className="h-full overflow-y-auto bg-zinc-950">
         <div className="max-w-md mx-auto px-4 py-8">
           <h1 className="text-xl font-bold text-zinc-100 mb-1">Live</h1>
-          <p className="text-sm text-zinc-500 mb-6">
-            Perform a setlist full-screen — on your own, or synced with the band.
+          <p className="text-sm text-zinc-500 mb-1">
+            Two roles: the leader performs and drives the set; everyone else follows.
           </p>
-
-          {/* ── Perform — always available, no hub required ──────────────── */}
-          <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-            Your setlists
-          </p>
-          {setlists === null ? (
-            <p className="text-sm text-zinc-500 mb-7">Loading…</p>
-          ) : setlists.length === 0 ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500 mb-7">
-              No setlists yet.{' '}
-              <Link href="/setlist/new" className="text-amber-300 hover:text-amber-200">
-                Create one
-              </Link>{' '}
-              to perform from.
-            </div>
-          ) : (
-            <div className="space-y-2 mb-7">
-              {setlists.map(sl => (
-                <Link
-                  key={sl.id}
-                  href={`/setlist/${sl.id}/play`}
-                  title="Full-screen performance view — swipe or tap to move between songs"
-                  className="flex items-center gap-3 px-3 py-3 rounded-xl border border-zinc-700 bg-zinc-900 hover:border-emerald-400/50 hover:bg-zinc-800/80 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-100 truncate">{sl.name}</p>
-                  </div>
-                  <span className="text-emerald-300 text-xs font-semibold flex-shrink-0">▶ Live</span>
-                </Link>
-              ))}
-            </div>
+          {hubUrl && (
+            <p className="text-xs text-zinc-600 font-mono mb-6 break-all">
+              This device: {hubUrl}
+            </p>
           )}
 
-          {/* ── Join someone else's session — optional, needs a hub ──────── */}
-          <div className="border-t border-zinc-800 pt-5">
-            <p className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-              Or follow another device
+          {/* ── LEAD — always available, no hub required ──────────────────── */}
+          <div className="rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.04] p-4 mb-5">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Lead</span>
+              <span className="text-[10px] text-zinc-500">— you drive, everyone else watches</span>
+            </div>
+            <p className="text-xs text-zinc-500 mb-3">
+              Pick a setlist to perform. This always works, hub or no hub —
+              going live to sync other devices is one tap once you&apos;re in.
+            </p>
+
+            {setlists === null ? (
+              <p className="text-sm text-zinc-500">Loading…</p>
+            ) : setlists.length === 0 ? (
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4 text-sm text-zinc-500">
+                No setlists yet.{' '}
+                <Link href="/setlist/new" className="text-amber-300 hover:text-amber-200">
+                  Create one
+                </Link>{' '}
+                to perform from.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {setlists.map(sl => (
+                  <Link
+                    key={sl.id}
+                    href={`/setlist/${sl.id}/play`}
+                    title="Full-screen performance view — swipe or tap to move between songs"
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl border border-zinc-700 bg-zinc-900 hover:border-emerald-400/50 hover:bg-zinc-800/80 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-zinc-100 truncate">{sl.name}</p>
+                    </div>
+                    <span className="text-emerald-300 text-xs font-semibold flex-shrink-0">▶ Live</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ── FOLLOW — join another device's session, needs a hub ───────── */}
+          <div className="rounded-2xl border border-amber-400/25 bg-amber-400/[0.04] p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">Follow</span>
+              <span className="text-[10px] text-zinc-500">— someone else is leading</span>
+            </div>
+            <p className="text-xs text-zinc-500 mb-3">
+              Needs the same band hub as the leader. If nothing shows up
+              below, check you are both on the address shown above.
             </p>
 
             {session.error === 'session-ended' && (
-              <div className="mb-4 px-3 py-2 rounded-lg bg-zinc-800/80 text-zinc-300 text-sm">
+              <div className="mb-3 px-3 py-2 rounded-lg bg-zinc-800/80 text-zinc-300 text-sm">
                 The leader ended the session.
               </div>
             )}
             {session.error === 'no-session' && (
-              <div className="mb-4 px-3 py-2 rounded-lg bg-amber-400/10 text-amber-300 text-sm flex items-center gap-2">
+              <div className="mb-3 px-3 py-2 rounded-lg bg-amber-400/10 text-amber-300 text-sm flex items-center gap-2">
                 <span className="w-3 h-3 border border-amber-400 border-t-transparent rounded-full animate-spin inline-block flex-shrink-0" />
                 Session interrupted — rejoining as soon as it is back…
               </div>
@@ -168,9 +188,8 @@ export default function LivePage() {
 
             {session.conn !== 'open' ? (
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Not connected to a band hub right now. That is only needed to
-                follow along with someone else&apos;s device — performing your
-                own setlist above works with no hub at all.
+                Not connected to a band hub right now — performing your own
+                setlist above still works with no hub at all.
               </p>
             ) : (
               <>
@@ -180,11 +199,11 @@ export default function LivePage() {
                   value={name}
                   onChange={e => setName(e.target.value)}
                   placeholder="e.g. Sarah"
-                  className="w-full text-sm mb-4"
+                  className="w-full text-sm mb-3"
                 />
 
-                {session.sessions.length > 0 && (
-                  <div className="mb-4">
+                {session.sessions.length > 0 ? (
+                  <div className="mb-3">
                     {session.sessions.map(s => (
                       <button
                         key={s.code}
@@ -201,6 +220,10 @@ export default function LivePage() {
                       </button>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-xs text-zinc-600 mb-3">
+                    Connected to this hub, but no one has gone live yet.
+                  </p>
                 )}
 
                 <div className="flex gap-2">
