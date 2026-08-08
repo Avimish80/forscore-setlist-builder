@@ -15,6 +15,7 @@ import LiveScoreView from '@/components/LiveScoreView';
 import { getSetlist, getSetlistInstruments } from '@/lib/data';
 import { resolvePartForItem } from '@/lib/parts';
 import { MAIN_VIEW, useLiveSession } from '@/lib/sync/use-live-session';
+import { useHubAddress } from '@/lib/sync/use-hub-address';
 import { useWakeLock } from '@/lib/sync/use-wake-lock';
 
 interface ItemRow {
@@ -45,17 +46,12 @@ export default function PlayingModePage() {
   const [loading, setLoading] = useState(true);
   const [browsedPosition, setBrowsedPosition] = useState(1);
   const [myView, setMyView] = useState<string>(MAIN_VIEW);
-  const [hubUrl, setHubUrl] = useState('');
   const [showLiveIntro, setShowLiveIntro] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
 
   const live = useLiveSession(id, name);
+  const hubUrl = useHubAddress();
   useWakeLock(true);
-
-  // The address every other device needs is simply the one this page is
-  // already open on — a follower is never on a different machine's origin,
-  // they're on THIS hub's. Read once the browser is available.
-  useEffect(() => { setHubUrl(window.location.origin); }, []);
 
   // The moment the session actually goes live, show it once, clearly —
   // this is the single fact the whole band needs and the only place it was

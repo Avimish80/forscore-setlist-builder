@@ -20,6 +20,7 @@ import Link from 'next/link';
 import LiveScoreView from '@/components/LiveScoreView';
 import { getSetlists } from '@/lib/data';
 import { useFollowSession } from '@/lib/sync/use-follow-session';
+import { useHubAddress } from '@/lib/sync/use-hub-address';
 import { useWakeLock } from '@/lib/sync/use-wake-lock';
 
 interface SetlistRow { id: number; name: string }
@@ -40,7 +41,7 @@ export default function LivePage() {
   const [autoFollow, setAutoFollow] = useState(false);
   const [displayedPosition, setDisplayedPosition] = useState<number | null>(null);
   const [setlists, setSetlists] = useState<SetlistRow[] | null>(null);
-  const [hubUrl, setHubUrl] = useState('');
+  const hubUrl = useHubAddress();
 
   useWakeLock(session.joined);
 
@@ -53,7 +54,6 @@ export default function LivePage() {
     // Always available regardless of hub connectivity — this is the local
     // client-side database, nothing to do with the network.
     setSetlists(getSetlists() as SetlistRow[]);
-    setHubUrl(window.location.origin);
   }, []);
 
   // Follow the committed song: jump straight there on first arrival or when
@@ -119,7 +119,7 @@ export default function LivePage() {
           </p>
           {hubUrl && (
             <p className="text-xs text-zinc-600 font-mono mb-6 break-all">
-              This device: {hubUrl}
+              This hub: {hubUrl} — never type &quot;localhost&quot; on a different device, it means that device itself.
             </p>
           )}
 

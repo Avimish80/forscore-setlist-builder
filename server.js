@@ -273,25 +273,39 @@ function printBanner() {
   console.log('  Band hub is up.');
   console.log('');
 
+  // DHCP hands out a fresh IP whenever a lease renews — mid-gig, that means
+  // last week's address can silently stop working. The machine's own Bonjour
+  // name doesn't change with it, so it's the one worth telling people to
+  // remember; the IPs below are the fallback if mDNS is blocked on this Wi-Fi.
+  const mdnsName = os.hostname();
+  if (mdnsName.endsWith('.local')) {
+    console.log(`  Preferred (doesn't change if the network address does):`);
+    console.log(`    http://${mdnsName}:${port}`);
+    console.log('');
+  }
+
   if (found.length === 0) {
     console.log(`  No network address found — is Wi-Fi on? Local only: http://localhost:${port}`);
     console.log('');
     return;
   }
 
-  console.log('  Open on every device (all on the same Wi-Fi):');
+  console.log('  Backup addresses (all on the same Wi-Fi):');
   console.log('');
   for (const { iface, address } of found) {
     console.log(`    ${iface.padEnd(6)} http://${address}:${port}`);
   }
   console.log('');
-  console.log(`  Musicians open the same address with /live on the end.`);
+  console.log(`  Musicians open the address with /live on the end.`);
   if (found.length > 1) {
     // Picking the wrong interface is the classic way this fails at a venue:
     // the hub answers on all of them, but only one is the band's Wi-Fi.
-    console.log('  More than one address here — use the one whose first three');
-    console.log('  numbers match the phone or iPad you are joining from.');
+    console.log('  More than one backup address here — use the one whose first');
+    console.log('  three numbers match the phone or iPad you are joining from.');
   }
+  console.log('');
+  console.log('  Never type "localhost" on a phone or a second computer — that');
+  console.log('  always means "this device," never this Mac.');
   console.log('');
 }
 
@@ -309,7 +323,20 @@ app.prepare().then(() => {
   // upgrades entirely to the handler below.
   if (typeof app.setupWebSocketHandler === 'function') app.setupWebSocketHandler();
 
-  const server = createServer((req, res) => handle(req, res, parse(req.url, true)));
+  const server = createServer((req, res) => {
+    const { pathname } = parse(req.url);
+    // Lets the app itself show the stable .local address, not just the
+    // terminal banner — the leader and every follower can read the same
+    // recommended address off their own screen. Only exists on the hub
+    // (this file); on Vercel there is no server.js, so the client's fetch
+    // 404s and it falls back to whatever origin the page was loaded from.
+    if (pathname === '/api/hub-info') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify({ hostname: os.hostname(), port }));
+      return;
+    }
+    handle(req, res, parse(req.url, true));
+  });
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (req, socket, head) => {
